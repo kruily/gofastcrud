@@ -117,6 +117,9 @@ func NewUserController(db *gorm.DB) *UserController {
     })
     return controller
 }
+
+// 注册自定义控制器
+crud.RegisterCustomController[models.User](factory, "/users", srv, controllers.NewUserController)
 ```
 
 ### 5. 启用swagger
