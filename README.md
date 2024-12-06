@@ -213,6 +213,14 @@ crud.SetConfig(&crud.CrudConfig{
 })
 ```
 `CustomResponser` 需要实现 `ICrudResponse` 接口
+```go
+// internal/crud/response.go
+type ICrudResponse interface {
+	Success(data interface{}) interface{}
+	Error(err error) interface{}
+	List(items interface{}, total int64) interface{}
+}
+```
 
 ### 分页配置
 

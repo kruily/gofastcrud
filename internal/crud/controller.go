@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kruily/GoFastCrud/internal/crud/types"
+	"github.com/kruily/GoFastCrud/pkg/validator"
 	"gorm.io/gorm"
 )
 
@@ -61,6 +62,11 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
 	var entity T
 	if err := ctx.ShouldBindJSON(&entity); err != nil {
+		return nil, err
+	}
+
+	// 验证实体
+	if err := validator.Validate(entity); err != nil {
 		return nil, err
 	}
 
@@ -138,6 +144,11 @@ func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 
 	var entity T
 	if err := ctx.ShouldBindJSON(&entity); err != nil {
+		return nil, err
+	}
+
+	// 验证实体
+	if err := validator.Validate(entity); err != nil {
 		return nil, err
 	}
 

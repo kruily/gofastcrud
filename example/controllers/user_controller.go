@@ -1,73 +1,69 @@
 package controllers
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"gorm.io/gorm"
+
 	"github.com/kruily/GoFastCrud/example/models"
 	"github.com/kruily/GoFastCrud/internal/crud"
-	"github.com/kruily/GoFastCrud/internal/crud/types"
-	"gorm.io/gorm"
 )
 
-// UserController 用户控制器
+var validate = validator.New()
+
+// CreateRequest 创建用户请求
+type CreateRequest struct {
+	Username string `json:"username" validate:"required,min=3,max=32"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=6"`
+}
+
 type UserController struct {
 	*crud.CrudController[models.User]
 }
 
-// NewUserController 创建用户控制器s
 func NewUserController(db *gorm.DB) *UserController {
 	controller := &UserController{
 		CrudController: crud.NewCrudController(db, models.User{}),
 	}
-	// 整个控制器添加中间件
-	controller.UseMiddleware("*", gin.Logger())
-	// 控制器的某个HTTP方法添加中间件
-	controller.UseMiddleware("POST", gin.Logger())
-
-	// 添加自定义路由
-	controller.AddRoute(types.APIRoute{
-		Path:        "/login",
-		Method:      "POST",
-		Tags:        []string{controller.GetEntityName()},
-		Summary:     "用户登录",
-		Description: "通过用户名和密码进行登录",
-		Handler:     controller.Login,
-		Request:     LoginRequest{},
-		Response:    LoginResponse{},
-	})
-
-	controller.AddRoute(types.APIRoute{
-		Path:        "/profile",
-		Method:      "GET",
-		Tags:        []string{controller.GetEntityName()},
-		Summary:     "获取用户资料",
-		Description: "获取当前登录用户的详细信息",
-		Handler:     controller.GetProfile,
-		// 单独添加中间件
-		Middlewares: []gin.HandlerFunc{gin.Logger()},
-	})
 
 	return controller
 }
 
-// Login 用户登录
-func (c *UserController) Login(ctx *gin.Context) (interface{}, error) {
-	// 登录逻辑实现
-	return gin.H{"message": "login success"}, nil
-}
+func (c *UserController) Create(ctx *gin.Context) {
+	var request CreateRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "Invalid request parameters",
+			"error":   err.Error(),
+		})
+		return
+	}
 
-// GetProfile 获取用户资料
-func (c *UserController) GetProfile(ctx *gin.Context) (interface{}, error) {
-	// 获取用户资料逻辑实现
-	return gin.H{"message": "get profile success"}, nil
-}
+	if err := validate.Struct(request); err != nil {
+		if _, ok := err.(*validator.InvalidValidationError); ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"code":    500,
+				"message": "Internal validation error",
+				"error":   err.Error(),
+			})
+			return
+		}
 
-// LoginRequest 登录请求
-type LoginRequest struct {
-	Username string `json:"username" example:"john_doe" description:"用户名"`
-	Password string `json:"password" example:"password123" description:"密码"`
-}
+		var errors []string
+		for _, err := range err.(validator.ValidationErrors) {
+			errors = append(errors, err.Error())
+		}
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "Validation failed",
+			"errors":  errors,
+		})
+		return
+	}
 
-// LoginResponse 登录响应
-type LoginResponse struct {
-	Token string `json:"token" example:"eyJhbGciOiJ..." description:"JWT令牌"`
+	// 在这里处理创建用户的逻辑
 }

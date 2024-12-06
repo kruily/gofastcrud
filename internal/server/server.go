@@ -17,11 +17,12 @@ import (
 )
 
 type Server struct {
-	config     *config.Config
-	router     *gin.Engine
-	srv        *http.Server
-	apiGroup   *gin.RouterGroup
-	swaggerGen *swagger.Generator
+	config        *config.Config
+	router        *gin.Engine
+	srv           *http.Server
+	apiGroup      *gin.RouterGroup
+	swaggerGen    *swagger.Generator
+	enableSwagger bool
 }
 
 // RouteRegister 路由注册函数类型
@@ -38,10 +39,11 @@ func NewServer(cfg *config.Config) *Server {
 	}
 
 	return &Server{
-		config:     cfg,
-		router:     r,
-		srv:        srv,
-		swaggerGen: swagger.NewGenerator(),
+		config:        cfg,
+		router:        r,
+		srv:           srv,
+		swaggerGen:    swagger.NewGenerator(),
+		enableSwagger: cfg.Server.EnableSwagger,
 	}
 }
 
@@ -61,6 +63,11 @@ func (s *Server) RegisterRoutes(register RouteRegister) {
 
 // Run 启动服务并处理优雅关闭
 func (s *Server) Run() error {
+	// 启用 Swagger 文档
+	if s.enableSwagger {
+		s.EnableSwagger()
+	}
+
 	// 启动服务
 	go func() {
 		log.Printf("Server starting on %s\n", s.config.Server.Address)
@@ -100,7 +107,7 @@ func (s *Server) EnableSwagger() {
 		// 提供 Swagger UI HTML
 		swaggerGroup.GET("/", func(c *gin.Context) {
 			c.Header("Content-Type", "text/html")
-			c.String(200, swaggerUITemplate, s.config.Server.Address)
+			c.String(200, swagger.SwaggerUITemplate, s.config.Server.Address)
 		})
 
 		// API 文档数据
@@ -109,54 +116,6 @@ func (s *Server) EnableSwagger() {
 		})
 	}
 }
-
-// Swagger UI 模板
-const swaggerUITemplate = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Fast CRUD API</title>
-    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css">
-    <link rel="icon" type="image/png" href="https://unpkg.com/swagger-ui-dist@5.11.0/favicon-32x32.png" sizes="32x32" />
-    <style>
-        html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
-        *, *:before, *:after { box-sizing: inherit; }
-        body { margin: 0; background: #fafafa; }
-    </style>
-</head>
-<body>
-    <div id="swagger-ui"></div>
-    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
-    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-standalone-preset.js"></script>
-    <script>
-        window.onload = () => {
-            const ui = SwaggerUIBundle({
-                url: "/swagger/doc.json",
-                dom_id: '#swagger-ui',
-                deepLinking: true,
-                presets: [
-                    SwaggerUIBundle.presets.apis,
-                    SwaggerUIStandalonePreset
-                ],
-                plugins: [
-                    SwaggerUIBundle.plugins.DownloadUrl
-                ],
-                layout: "StandaloneLayout",
-                defaultModelsExpandDepth: 1,
-                defaultModelExpandDepth: 1,
-                defaultModelRendering: 'example',
-                displayRequestDuration: true,
-                docExpansion: 'list',
-                filter: true,
-                showExtensions: true
-            });
-            window.ui = ui;
-        };
-    </script>
-</body>
-</html>
-`
 
 // RegisterCrudController 注册 CRUD 控制器并生成文档
 func (s *Server) RegisterCrudController(path string, controller interface{}, entityType reflect.Type) {
@@ -167,5 +126,7 @@ func (s *Server) RegisterCrudController(path string, controller interface{}, ent
 	}
 
 	// 传入 controller 以生成路由文档
-	s.swaggerGen.RegisterEntity(entityType, s.apiGroup.BasePath(), routePath, controller)
+	if s.enableSwagger {
+		s.swaggerGen.RegisterEntity(entityType, s.apiGroup.BasePath(), routePath, controller)
+	}
 }

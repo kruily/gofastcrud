@@ -13,7 +13,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Address string `yaml:"address"`
+	Address       string `yaml:"address"`
+	EnableSwagger bool   `yaml:"enable_swagger"`
 }
 
 type DatabaseConfig struct {
