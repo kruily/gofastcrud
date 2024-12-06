@@ -9,6 +9,7 @@ import (
 
 	"github.com/kruily/GoFastCrud/example/models"
 	"github.com/kruily/GoFastCrud/internal/crud"
+	"github.com/kruily/GoFastCrud/internal/crud/types"
 )
 
 var validate = validator.New()
@@ -28,11 +29,17 @@ func NewUserController(db *gorm.DB) *UserController {
 	controller := &UserController{
 		CrudController: crud.NewCrudController(db, models.User{}),
 	}
-
+	controller.AddRoute(types.APIRoute{
+		Method:  http.MethodPost,
+		Path:    "/register",
+		Summary: "注册用户",
+		Tags:    []string{controller.GetEntityName()},
+		Handler: controller.Create,
+	})
 	return controller
 }
 
-func (c *UserController) Create(ctx *gin.Context) {
+func (c *UserController) Create(ctx *gin.Context) (interface{}, error) {
 	var request CreateRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -40,7 +47,7 @@ func (c *UserController) Create(ctx *gin.Context) {
 			"message": "Invalid request parameters",
 			"error":   err.Error(),
 		})
-		return
+		return nil, err
 	}
 
 	if err := validate.Struct(request); err != nil {
@@ -50,7 +57,7 @@ func (c *UserController) Create(ctx *gin.Context) {
 				"message": "Internal validation error",
 				"error":   err.Error(),
 			})
-			return
+			return nil, err
 		}
 
 		var errors []string
@@ -62,8 +69,9 @@ func (c *UserController) Create(ctx *gin.Context) {
 			"message": "Validation failed",
 			"errors":  errors,
 		})
-		return
+		return nil, err
 	}
 
 	// 在这里处理创建用户的逻辑
+	return nil, nil
 }

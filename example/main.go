@@ -51,9 +51,6 @@ func main() {
 	// crud.Register[*models.Book](factory, "/books", srv).
 	// 	UseMiddleware("*", gin.Logger())
 
-	// 启用 Swagger
-	srv.EnableSwagger()
-
 	// 运行服务（包含优雅启停）
 	if err := srv.Run(); err != nil {
 		log.Fatalf("Server error: %v", err)

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -13,7 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kruily/GoFastCrud/internal/config"
-	"github.com/kruily/GoFastCrud/internal/swagger"
+	"github.com/kruily/GoFastCrud/internal/swagger" // swagger files
 )
 
 type Server struct {
@@ -102,19 +103,18 @@ func (s *Server) Router() *gin.Engine {
 
 // EnableSwagger 启用 Swagger 文档
 func (s *Server) EnableSwagger() {
-	swaggerGroup := s.router.Group("/swagger")
-	{
-		// 提供 Swagger UI HTML
-		swaggerGroup.GET("/", func(c *gin.Context) {
-			c.Header("Content-Type", "text/html")
-			c.String(200, swagger.SwaggerUITemplate, s.config.Server.Address)
-		})
+	// 创建自定义的 swagger handler
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/swagger/doc.json" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(s.swaggerGen.GetAllSwagger())
+			return
+		}
+		swagger.SwaggerUIHandler(w, r)
+	})
 
-		// API 文档数据
-		swaggerGroup.GET("/doc.json", func(c *gin.Context) {
-			c.JSON(200, s.swaggerGen.GetAllSwagger())
-		})
-	}
+	// 注册 Swagger UI 路由
+	s.router.GET("/swagger/*any", gin.WrapH(handler))
 }
 
 // RegisterCrudController 注册 CRUD 控制器并生成文档
