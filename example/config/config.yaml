@@ -1,11 +1,70 @@
+app:
+  name: "GoFastCrud"
+  version: "1.0.0"
+  mode: "debug"  # debug, release, test gorm
+  environment: "development"  # development, production, staging
+
 server:
-  address: ":8080"
+  address: "0.0.0.0"
+  port: 8080
+  read_timeout: 60
+  write_timeout: 60
   enable_swagger: true
-  
+
 database:
   driver: "mysql"
   host: "localhost"
   port: 3306
   username: "root"
-  password: "root2020"
-  database: "test_crud"
+  password: "123456"
+  database: "xiu"
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 3600
+  charset: "utf8mb4"
+
+log:
+  level: "debug"
+  filename: "logs/app.log"
+  max_size: 100
+  max_backups: 10
+  max_age: 30
+  compress: true
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 100
+
+jwt:
+  secret_key: "your-secret-key"
+  expire_hours: 24
+  issuer: "GoFastCrud"
+
+security:
+  rate_limit:
+    enabled: true
+    requests_per_second: 10
+    burst: 20
+    ttl_hours: 1
+  cors:
+    allowed_origins:
+      - "*"
+    allowed_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "PATCH"
+    allowed_headers:
+      - "Origin"
+      - "Content-Type"
+      - "Authorization"
+    allow_credentials: true
+    max_age_hours: 12
+  xss_protection:
+    enabled: true
+  sql_injection_protection:
+    enabled: true

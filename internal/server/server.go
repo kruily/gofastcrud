@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/kruily/GoFastCrud/internal/config"
 	"github.com/kruily/GoFastCrud/internal/swagger" // swagger files
 	"github.com/kruily/GoFastCrud/internal/templates"
+	"github.com/kruily/GoFastCrud/pkg/logger"
 )
 
 type Server struct {
@@ -23,6 +25,7 @@ type Server struct {
 	router        *gin.Engine
 	srv           *http.Server
 	apiGroup      *gin.RouterGroup
+	log           *logger.Logger
 	swaggerGen    *swagger.Generator
 	enableSwagger bool
 }
@@ -34,9 +37,12 @@ func NewServer(cfg *config.Config) *Server {
 	// 创建 Gin 引擎
 	r := gin.Default()
 
+	// 拼接地址
+	address := fmt.Sprintf("%s:%d", cfg.Server.Address, cfg.Server.Port)
+
 	// 创建 HTTP 服务
 	srv := &http.Server{
-		Addr:    cfg.Server.Address,
+		Addr:    address,
 		Handler: r,
 	}
 
@@ -47,6 +53,11 @@ func NewServer(cfg *config.Config) *Server {
 		swaggerGen:    swagger.NewGenerator(),
 		enableSwagger: cfg.Server.EnableSwagger,
 	}
+}
+
+// SetLogger 设置日志实例
+func (s *Server) SetLogger(log *logger.Logger) {
+	s.log = log
 }
 
 // Publish 设置 API 路径前缀

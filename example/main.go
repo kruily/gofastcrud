@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/kruily/GoFastCrud/example/controllers"
 	"github.com/kruily/GoFastCrud/example/models"
@@ -9,6 +10,7 @@ import (
 	"github.com/kruily/GoFastCrud/internal/crud"
 	"github.com/kruily/GoFastCrud/internal/database"
 	"github.com/kruily/GoFastCrud/internal/server"
+	"github.com/kruily/GoFastCrud/pkg/logger"
 )
 
 // @title Fast CRUD API
@@ -16,8 +18,22 @@ import (
 // @description 自动生成的 CRUD API
 // @BasePath /api/v1
 func main() {
+	// 创建配置管理器
+	configManager := config.NewConfigManager()
+
 	// 加载配置
-	cfg := config.Load("example/config/config.yaml")
+	configPath := os.Getenv("CONFIG_PATH")
+	if err := configManager.LoadConfig(configPath); err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// 注册配置重载回调
+	configManager.OnReload(func() {
+		log.Println("Configuration reloaded")
+		// 这里可以添加重载后的处理逻辑
+	})
+
+	cfg := configManager.GetConfig()
 
 	// 创建数据库管理器
 	db := database.New()
@@ -30,9 +46,28 @@ func main() {
 	)
 
 	// 初始化数据库
-	if err := db.Init(cfg.Database); err != nil {
+	if err := db.Init(&cfg.Database); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
+
+	// 创建日志实例
+	logConfig := logger.Config{
+		Level: logger.InfoLevel,
+		FileConfig: &logger.FileConfig{
+			Filename:   "logs/app.log",
+			MaxSize:    100,
+			MaxBackups: 3,
+			MaxAge:     7,
+			Compress:   true,
+		},
+		ConsoleLevel: logger.DebugLevel,
+	}
+
+	log, err := logger.NewLogger(logConfig)
+	if err != nil {
+		log.Fatal("Failed to create logger: %v", map[string]interface{}{"error": err})
+	}
+	defer log.Close()
 
 	// 创建服务实例
 	srv := server.NewServer(cfg)
@@ -53,6 +88,6 @@ func main() {
 
 	// 运行服务（包含优雅启停）
 	if err := srv.Run(); err != nil {
-		log.Fatalf("Server error: %v", err)
+		log.Fatal("Server error: %v", map[string]interface{}{"error": err})
 	}
 }
