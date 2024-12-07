@@ -1,13 +1,11 @@
 package swagger
 
 import (
-	"embed"
 	"html/template"
 	"net/http"
-)
 
-//go:embed swagger-ui/*
-var swaggerUI embed.FS
+	"github.com/kruily/GoFastCrud/internal/templates"
+)
 
 // SwaggerUIHandler 处理Swagger UI请求
 func SwaggerUIHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +19,7 @@ func SwaggerUIHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 处理index.html
 	if path == "index.html" {
-		tmpl, err := template.ParseFS(swaggerUI, "swagger-ui/index.html")
+		tmpl, err := template.ParseFS(templates.Templates, "swagger-ui/index.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -34,7 +32,7 @@ func SwaggerUIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 处理其他静态资源
-	content, err := swaggerUI.ReadFile("swagger-ui/" + path)
+	content, err := templates.Templates.ReadFile("swagger-ui/" + path)
 	if err != nil {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return

@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kruily/GoFastCrud/internal/config"
+	"github.com/kruily/GoFastCrud/internal/static"
 	"github.com/kruily/GoFastCrud/internal/swagger" // swagger files
 )
 
@@ -68,6 +69,9 @@ func (s *Server) Run() error {
 	if s.enableSwagger {
 		s.EnableSwagger()
 	}
+
+	// 注册主页路由
+	s.router.GET("/", gin.WrapH(static.HomeHandler()))
 
 	// 启动服务
 	go func() {

@@ -68,14 +68,16 @@ if err := srv.Run(); err != nil {
 go
 // models/user.go
 type User struct {
+    // 嵌入crud基础实体 
+    crud.BaseEntity  `json:"-"` //不参与json序列化
 	ID        uint   `json:"id" gorm:"primarykey"`
 	Username  string `json:"username" binding:"required" description:"用户名"`
 	Email     string `json:"email" description:"邮箱地址"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
-func (u User) SetID(id uint) {
-	u.ID = id
+func (u User) Table() string {
+	return "users"
 }
 ```
 
