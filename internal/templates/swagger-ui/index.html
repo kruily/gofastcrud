@@ -9,16 +9,65 @@
         html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
         *, *:before, *:after { box-sizing: inherit; }
         body { margin: 0; background: #fafafa; }
+        #version-selector-container {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            z-index: 9999;
+            background: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border: 1px solid #eee;
+        }
+        #version-selector-container label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #3b4151;
+        }
+        #version-selector {
+            width: 150px;
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            outline: none;
+        }
+        #version-selector:hover {
+            border-color: #40a9ff;
+        }
+        #version-selector:focus {
+            border-color: #40a9ff;
+            box-shadow: 0 0 0 2px rgba(24,144,255,0.2);
+        }
     </style>
 </head>
 <body>
+    <div id="version-selector-container">
+        <label>API Version</label>
+        <select id="version-selector" onchange="switchVersion(this.value)">
+            {{range .Versions}}
+                <option value="{{.Path}}" {{if eq $.CurrentVersion .Version}}selected{{end}}>
+                    {{.Version}}
+                </option>
+            {{end}}
+        </select>
+    </div>
     <div id="swagger-ui"></div>
     <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
     <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-standalone-preset.js"></script>
     <script>
+        function switchVersion(path) {
+            window.location.href = path;
+        }
+
         window.onload = () => {
             const ui = SwaggerUIBundle({
-                url: "/swagger/doc.json",
+                url: "{{.URL}}",
                 dom_id: '#swagger-ui',
                 deepLinking: true,
                 presets: [
@@ -28,15 +77,9 @@
                 plugins: [
                     SwaggerUIBundle.plugins.DownloadUrl
                 ],
-                layout: "StandaloneLayout",
-                defaultModelsExpandDepth: 1,
-                defaultModelExpandDepth: 1,
-                defaultModelRendering: 'example',
-                displayRequestDuration: true,
-                docExpansion: 'list',
-                filter: true,
-                showExtensions: true
+                layout: "StandaloneLayout"
             });
+
             window.ui = ui;
         };
     </script>

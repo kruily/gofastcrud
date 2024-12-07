@@ -16,8 +16,8 @@ database:
   host: "localhost"
   port: 3306
   username: "root"
-  password: "123456"
-  database: "xiu"
+  password: "root2020"
+  database: "test_crud"
   max_idle_conns: 10
   max_open_conns: 100
   conn_max_lifetime: 3600
@@ -25,7 +25,7 @@ database:
 
 log:
   level: "debug"
-  filename: "logs/app.log"
+  filename: "logs/app1.log"
   max_size: 100
   max_backups: 10
   max_age: 30

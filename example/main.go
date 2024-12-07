@@ -10,13 +10,23 @@ import (
 	"github.com/kruily/GoFastCrud/internal/crud"
 	"github.com/kruily/GoFastCrud/internal/database"
 	"github.com/kruily/GoFastCrud/internal/server"
-	"github.com/kruily/GoFastCrud/pkg/logger"
+	"github.com/kruily/GoFastCrud/pkg/env"
 )
 
 // @title Fast CRUD API
 // @version 1.0
 // @description 自动生成的 CRUD API
 // @BasePath /api/v1
+func init() {
+	// 获取项目根目录
+	projectRoot, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("无法获取项目根目录: %v", err)
+	}
+	// 加载环境变量
+	env.LoadEnv(projectRoot)
+}
+
 func main() {
 	// 创建配置管理器
 	configManager := config.NewConfigManager()
@@ -51,28 +61,29 @@ func main() {
 	}
 
 	// 创建日志实例
-	logConfig := logger.Config{
-		Level: logger.InfoLevel,
-		FileConfig: &logger.FileConfig{
-			Filename:   "logs/app.log",
-			MaxSize:    100,
-			MaxBackups: 3,
-			MaxAge:     7,
-			Compress:   true,
-		},
-		ConsoleLevel: logger.DebugLevel,
-	}
+	// logConfig := logger.Config{
+	// 	Level: logger.InfoLevel,
+	// 	FileConfig: &logger.FileConfig{
+	// 		Filename:   "logs/app.log",
+	// 		MaxSize:    100,
+	// 		MaxBackups: 3,
+	// 		MaxAge:     7,
+	// 		Compress:   true,
+	// 	},
+	// 	ConsoleLevel: logger.DebugLevel,
+	// }
 
-	log, err := logger.NewLogger(logConfig)
-	if err != nil {
-		log.Fatal("Failed to create logger: %v", map[string]interface{}{"error": err})
-	}
-	defer log.Close()
+	// log, err := logger.NewLogger(logConfig)
+	// if err != nil {
+	// 	log.Fatal("Failed to create logger: %v", map[string]interface{}{"error": err})
+	// }
+	// defer log.Close()
 
 	// 创建服务实例
 	srv := server.NewServer(cfg)
 	// 发布路由
-	srv.Publish("/api/v1")
+	srv.PublishVersion(server.V1)
+	srv.PublishVersion(server.V2)
 
 	// 创建控制器工厂
 	factory := crud.NewControllerFactory(db.DB())

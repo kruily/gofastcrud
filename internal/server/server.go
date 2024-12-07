@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,13 +20,14 @@ import (
 )
 
 type Server struct {
-	config        *config.Config
-	router        *gin.Engine
-	srv           *http.Server
-	apiGroup      *gin.RouterGroup
-	log           *logger.Logger
-	swaggerGen    *swagger.Generator
-	enableSwagger bool
+	config         *config.Config
+	router         *gin.Engine
+	srv            *http.Server
+	log            *logger.Logger
+	swaggerGen     *swagger.Generator
+	enableSwagger  bool
+	versionManager *VersionManager
+	apiGroups      map[APIVersion]*gin.RouterGroup
 }
 
 // RouteRegister 路由注册函数类型
@@ -47,11 +47,13 @@ func NewServer(cfg *config.Config) *Server {
 	}
 
 	return &Server{
-		config:        cfg,
-		router:        r,
-		srv:           srv,
-		swaggerGen:    swagger.NewGenerator(),
-		enableSwagger: cfg.Server.EnableSwagger,
+		config:         cfg,
+		router:         r,
+		srv:            srv,
+		swaggerGen:     swagger.NewGenerator(),
+		enableSwagger:  cfg.Server.EnableSwagger,
+		versionManager: NewVersionManager(),
+		apiGroups:      make(map[APIVersion]*gin.RouterGroup),
 	}
 }
 
@@ -61,17 +63,21 @@ func (s *Server) SetLogger(log *logger.Logger) {
 }
 
 // Publish 设置 API 路径前缀
-func (s *Server) Publish(apiPath string) *Server {
-	s.apiGroup = s.router.Group(apiPath)
+func (s *Server) PublishVersion(version APIVersion) *Server {
+	if !s.versionManager.IsValidVersion(version) {
+		s.versionManager.RegisterVersion(version)
+	}
+	path := fmt.Sprintf("/api/%s", version)
+	group := s.router.Group(path)
+	s.apiGroups[version] = group
 	return s
 }
 
 // RegisterRoutes 注册路由
 func (s *Server) RegisterRoutes(register RouteRegister) {
-	if s.apiGroup == nil {
-		s.apiGroup = s.router.Group("/") // 默认使用根路径
+	for _, group := range s.apiGroups {
+		register(group)
 	}
-	register(s.apiGroup)
 }
 
 // Run 启动服务并处理优雅关闭
@@ -118,30 +124,39 @@ func (s *Server) Router() *gin.Engine {
 
 // EnableSwagger 启用 Swagger 文档
 func (s *Server) EnableSwagger() {
-	// 创建自定义的 swagger handler
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/swagger/doc.json" {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(s.swaggerGen.GetAllSwagger())
-			return
+		currentVersion := s.versionManager.ParseVersionFromPath(r.URL.Path)
+		versions := s.versionManager.GetAvailableVersions()
+		versionStrs := make([]string, len(versions))
+		for i, v := range versions {
+			versionStrs[i] = string(v)
 		}
-		swagger.SwaggerUIHandler(w, r)
+
+		// 获取所有文档
+		docs := s.swaggerGen.GetAllSwagger()
+
+		swagger.SwaggerUIHandler(w, r, versionStrs, string(currentVersion), docs)
 	})
 
 	// 注册 Swagger UI 路由
-	s.router.GET("/swagger/*any", gin.WrapH(handler))
+	for version := range s.apiGroups {
+		path := fmt.Sprintf("/api/%s/swagger/*any", version)
+		s.router.GET(path, gin.WrapH(handler))
+	}
 }
 
 // RegisterCrudController 注册 CRUD 控制器并生成文档
 func (s *Server) RegisterCrudController(path string, controller interface{}, entityType reflect.Type) {
-	routePath := strings.TrimPrefix(path, "/")
+	for version, group := range s.apiGroups {
+		routePath := strings.TrimPrefix(path, "/")
+		if c, ok := controller.(interface{ RegisterRoutes(*gin.RouterGroup) }); ok {
+			versionGroup := group.Group(path)
+			c.RegisterRoutes(versionGroup)
+		}
 
-	if c, ok := controller.(interface{ RegisterRoutes(*gin.RouterGroup) }); ok {
-		c.RegisterRoutes(s.apiGroup.Group(path))
-	}
-
-	// 传入 controller 以生成路由文档
-	if s.enableSwagger {
-		s.swaggerGen.RegisterEntity(entityType, s.apiGroup.BasePath(), routePath, controller)
+		// 生成对应版本的文档
+		if s.enableSwagger {
+			s.swaggerGen.RegisterEntityWithVersion(entityType, group.BasePath(), routePath, controller, string(version))
+		}
 	}
 }

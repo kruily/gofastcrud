@@ -1,33 +1,64 @@
 package swagger
 
 import (
-	"html/template"
+	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
+	"strings"
 
+	"github.com/go-openapi/spec"
 	"github.com/kruily/GoFastCrud/internal/templates"
 )
 
+type VersionInfo struct {
+	Version string
+	Path    string
+}
+
 // SwaggerUIHandler 处理Swagger UI请求
-func SwaggerUIHandler(w http.ResponseWriter, r *http.Request) {
+func SwaggerUIHandler(w http.ResponseWriter, r *http.Request, versions []string, currentVersion string, docs interface{}) {
 	path := r.URL.Path
-	if path == "/swagger/" || path == "/swagger" {
-		path = "/swagger/index.html"
+	path = strings.TrimPrefix(path, fmt.Sprintf("/api/%s/swagger/", currentVersion))
+
+	// 处理doc.json请求
+	if path == "doc.json" {
+		w.Header().Set("Content-Type", "application/json")
+		if allDocs, ok := docs.(map[string]*spec.Swagger); ok {
+			if doc, exists := allDocs[currentVersion]; exists {
+				json.NewEncoder(w).Encode(doc)
+			}
+		}
+		return
 	}
 
-	// 移除前缀
-	path = path[len("/swagger/"):]
-
 	// 处理index.html
-	if path == "index.html" {
-		tmpl, err := template.ParseFS(templates.Templates, "swagger-ui/index.html")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	if path == "index.html" || path == "" {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		tmpl.Execute(w, map[string]interface{}{
-			"URL": "/swagger/doc.json",
-		})
+
+		// 构建版本信息
+		versionInfos := make([]VersionInfo, 0, len(versions))
+		for _, v := range versions {
+			versionInfos = append(versionInfos, VersionInfo{
+				Version: v,
+				Path:    fmt.Sprintf("/api/%s/swagger/", v),
+			})
+		}
+
+		data := map[string]interface{}{
+			"URL":            fmt.Sprintf("/api/%s/swagger/doc.json", currentVersion),
+			"Versions":       versionInfos,
+			"CurrentVersion": currentVersion,
+		}
+
+		// 添加调试信息
+		log.Printf("Template data: %+v", data)
+		log.Printf("Version infos: %+v", versionInfos)
+
+		if err := templates.SwaggerUITemplate(w, data); err != nil {
+			log.Printf("Template error: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 

@@ -21,8 +21,8 @@ func NewGenerator() *Generator {
 	}
 }
 
-// RegisterEntity 注册实体的 API 文档
-func (g *Generator) RegisterEntity(entityType reflect.Type, basePath string, routePath string, controller interface{}) {
+// RegisterEntityWithVersion 注册带版本的实体文档
+func (g *Generator) RegisterEntityWithVersion(entityType reflect.Type, basePath string, routePath string, controller interface{}, version string) {
 	// 处理指针类型
 	if entityType.Kind() == reflect.Ptr {
 		entityType = entityType.Elem()
@@ -102,7 +102,7 @@ func (g *Generator) RegisterEntity(entityType reflect.Type, basePath string, rou
 				InfoProps: spec.InfoProps{
 					Title:       fmt.Sprintf("%s API", entityName),
 					Description: fmt.Sprintf("API documentation for %s", entityName),
-					Version:     "1.0",
+					Version:     version,
 				},
 			},
 			BasePath:    basePath,
@@ -119,7 +119,7 @@ func (g *Generator) RegisterEntity(entityType reflect.Type, basePath string, rou
 		},
 	}
 
-	g.docs[routePath] = swagger
+	g.docs[fmt.Sprintf("%s_%s", routePath, version)] = swagger
 }
 
 // GetSwagger 获取指定实体的 Swagger 文档
@@ -129,15 +129,66 @@ func (g *Generator) GetSwagger(entityPath string) *spec.Swagger {
 
 // GetAllSwagger 获取合并后的完整 Swagger 文档
 func (g *Generator) GetAllSwagger() interface{} {
-	swagger := g.mergeSwaggers()
-	// 添加必要的字段
-	swagger.SwaggerProps.Swagger = "2.0"
-	if swagger.Paths == nil {
-		swagger.Paths = &spec.Paths{
-			Paths: make(map[string]spec.PathItem),
+	versionDocs := make(map[string]*spec.Swagger)
+
+	// 遍历所有文档，按版本分组
+	for path, swagger := range g.docs {
+		parts := strings.Split(path, "_")
+		if len(parts) < 2 {
+			continue
+		}
+		version := parts[len(parts)-1] // 获取版本号
+
+		// 如果该版本的文档不存在，创建一个新的
+		if _, exists := versionDocs[version]; !exists {
+			versionDocs[version] = &spec.Swagger{
+				SwaggerProps: spec.SwaggerProps{
+					Swagger: "2.0",
+					Info: &spec.Info{
+						InfoProps: spec.InfoProps{
+							Title:       fmt.Sprintf("Fast CRUD API (%s)", version),
+							Description: fmt.Sprintf("Auto-generated API documentation for version %s", version),
+							Version:     version,
+						},
+					},
+					BasePath:    fmt.Sprintf("/api/%s", version),
+					Schemes:     []string{"http"},
+					Consumes:    []string{"application/json"},
+					Produces:    []string{"application/json"},
+					Paths:       &spec.Paths{Paths: make(map[string]spec.PathItem)},
+					Definitions: make(spec.Definitions),
+					Tags:        []spec.Tag{},
+				},
+			}
+		}
+
+		// 合并路径
+		for path, item := range swagger.Paths.Paths {
+			versionDocs[version].Paths.Paths[path] = item
+		}
+
+		// 合并定义
+		for name, schema := range swagger.Definitions {
+			if _, exists := versionDocs[version].Definitions[name]; !exists {
+				versionDocs[version].Definitions[name] = schema
+			}
+		}
+
+		// 合并标签（去重）
+		if swagger.Tags != nil {
+			tagMap := make(map[string]bool)
+			for _, existingTag := range versionDocs[version].Tags {
+				tagMap[existingTag.Name] = true
+			}
+			for _, tag := range swagger.Tags {
+				if !tagMap[tag.Name] {
+					versionDocs[version].Tags = append(versionDocs[version].Tags, tag)
+				}
+			}
 		}
 	}
-	return swagger
+
+	return versionDocs
 }
 
 // mergeSwaggers 合并所有实体的 Swagger 文档
