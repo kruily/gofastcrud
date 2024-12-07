@@ -14,8 +14,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kruily/GoFastCrud/internal/config"
-	"github.com/kruily/GoFastCrud/internal/static"
 	"github.com/kruily/GoFastCrud/internal/swagger" // swagger files
+	"github.com/kruily/GoFastCrud/internal/templates"
 )
 
 type Server struct {
@@ -71,7 +71,7 @@ func (s *Server) Run() error {
 	}
 
 	// 注册主页路由
-	s.router.GET("/", gin.WrapH(static.HomeHandler()))
+	s.router.GET("/", gin.WrapH(templates.HomeHandler()))
 
 	// 启动服务
 	go func() {
