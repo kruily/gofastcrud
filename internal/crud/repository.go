@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -35,7 +36,7 @@ type IRepository[T ICrudEntity] interface {
 	Where(query interface{}, args ...interface{}) IRepository[T]
 	Order(value interface{}) IRepository[T]
 	Select(query interface{}, args ...interface{}) IRepository[T]
-	Preload(query string, args ...interface{}) IRepository[T]
+	Preload(query ...string) IRepository[T]
 	Joins(query string, args ...interface{}) IRepository[T]
 	Group(query string) IRepository[T]
 	Having(query interface{}, args ...interface{}) IRepository[T]
@@ -58,18 +59,142 @@ type IRepository[T ICrudEntity] interface {
 	// Session 创建新会话，避免污染原有查询
 	Session() IRepository[T]
 
-	// QueryHook 查询钩子
+	// 查询钩子
 	AddQueryHook(hook QueryHook) IRepository[T]
 }
 
 // Repository 仓储实现
 type Repository[T ICrudEntity] struct {
-	db *gorm.DB
+	db         *gorm.DB
+	entityType reflect.Type
+	preloads   []string // 预加载字段
+}
+
+// NewRepository 创建仓储实例
+func NewRepository[T ICrudEntity](db *gorm.DB, entity T) *Repository[T] {
+	entityType := reflect.TypeOf(entity)
+	if entityType.Kind() == reflect.Ptr {
+		entityType = entityType.Elem()
+	}
+	return &Repository[T]{
+		db:         db,
+		entityType: entityType,
+		preloads:   make([]string, 0),
+	}
+}
+
+// Session 创建新会话
+func (r *Repository[T]) Session() IRepository[T] {
+	return &Repository[T]{
+		db:         r.db.Session(&gorm.Session{}),
+		entityType: r.entityType,
+		preloads:   make([]string, 0),
+	}
+}
+
+// AddQueryHook 添加查询钩子
+func (r *Repository[T]) AddQueryHook(hook QueryHook) IRepository[T] {
+	// 创建新的会话以避免污染原有查询
+	db := r.db.Session(&gorm.Session{})
+	// 注册回调
+	db.Callback().Query().Before("gorm:query").Register("my_hook:before", hook.BeforeQuery)
+	db.Callback().Query().After("gorm:query").Register("my_hook:after", hook.AfterQuery)
+	r.db = db
+	return r
+}
+
+// Preload 添加预加载
+func (r *Repository[T]) Preload(query ...string) IRepository[T] {
+	r.preloads = append(r.preloads, query...)
+	return r
+}
+
+// applyPreloads 应用预加载
+func (r *Repository[T]) applyPreloads(db *gorm.DB) *gorm.DB {
+	for _, preload := range r.preloads {
+		db = db.Preload(preload)
+	}
+	return db
+}
+
+// WithTx 使用事务
+func (r *Repository[T]) WithTx(tx *gorm.DB) IRepository[T] {
+	return &Repository[T]{
+		db:         tx,
+		entityType: r.entityType,
+		preloads:   r.preloads,
+	}
+}
+
+// FindOne 查询单个实体
+func (r *Repository[T]) FindOne(ctx context.Context, query interface{}, args ...interface{}) (*T, error) {
+	var entity T
+	db := r.applyPreloads(r.db.WithContext(ctx))
+	err := db.Where(query, args...).First(&entity).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &entity, nil
+}
+
+// Find 查询实体列表
+func (r *Repository[T]) Find(ctx context.Context, entity *T, opts QueryOptions) ([]T, error) {
+	var entities []T
+	db := r.applyPreloads(r.db.WithContext(ctx).Model(entity))
+
+	// 应用查询选项
+	if opts.Search != "" && len(opts.SearchFields) > 0 {
+		for _, field := range opts.SearchFields {
+			db = db.Or(field+" LIKE ?", "%"+opts.Search+"%")
+		}
+	}
+
+	if len(opts.OrderBy) > 0 {
+		for _, order := range opts.OrderBy {
+			db = db.Order(order)
+		}
+	}
+
+	if len(opts.Preload) > 0 {
+		for _, preload := range opts.Preload {
+			db = db.Preload(preload)
+		}
+	}
+
+	offset := (opts.Page - 1) * opts.PageSize
+	err := db.Offset(offset).Limit(opts.PageSize).Find(&entities).Error
+	return entities, err
+}
+
+// FindAll 查询所有符合条件的记录
+func (r *Repository[T]) FindAll(ctx context.Context, query interface{}, args ...interface{}) ([]T, error) {
+	var entities []T
+	db := r.applyPreloads(r.db.WithContext(ctx))
+	err := db.Where(query, args...).Find(&entities).Error
+	return entities, err
+}
+
+// FindById 根据ID查询
+func (r *Repository[T]) FindById(ctx context.Context, id uint) (*T, error) {
+	var entity T
+	db := r.applyPreloads(r.db.WithContext(ctx))
+	err := db.First(&entity, id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &entity, nil
 }
 
 // 实现所有接口方法...
 func (r *Repository[T]) Create(ctx context.Context, entity *T) error {
-	return r.db.WithContext(ctx).Create(entity).Error
+	return r.db.WithContext(ctx).
+		Create(entity).Error
 }
 
 // BatchCreate 批量创建
@@ -81,25 +206,12 @@ func (r *Repository[T]) BatchCreate(ctx context.Context, entities []T, opts ...B
 	return r.db.WithContext(ctx).CreateInBatches(entities, batchSize).Error
 }
 
-// FindOne 查询单个实体
-func (r *Repository[T]) FindOne(ctx context.Context, query interface{}, args ...interface{}) (*T, error) {
-	var entity T
-	err := r.db.WithContext(ctx).Where(query, args...).First(&entity).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &entity, nil
-}
-
 // Page 分页查询
 func (r *Repository[T]) Page(ctx context.Context, page int, pageSize int) ([]T, int64, error) {
 	var entities []T
 	var total int64
 
-	db := r.db.WithContext(ctx)
+	db := r.applyPreloads(r.db.WithContext(ctx))
 	if err := db.Model(new(T)).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -124,11 +236,6 @@ func (r *Repository[T]) LockForUpdate() IRepository[T] {
 	return &Repository[T]{
 		db: r.db.Clauses(clause.Locking{Strength: "UPDATE"}),
 	}
-}
-
-// WithTx 使用事务
-func (r *Repository[T]) WithTx(tx *gorm.DB) IRepository[T] {
-	return &Repository[T]{db: tx}
 }
 
 // Avg 计算平均值
@@ -219,55 +326,6 @@ func (r *Repository[T]) DeleteById(ctx context.Context, id uint, opts ...DeleteO
 	return r.Delete(ctx, entity, opts...)
 }
 
-// Find 查询实体列表
-func (r *Repository[T]) Find(ctx context.Context, entity *T, opts QueryOptions) ([]T, error) {
-	var entities []T
-	db := r.db.WithContext(ctx).Model(entity)
-
-	// 应用查询选项
-	if opts.Search != "" && len(opts.SearchFields) > 0 {
-		for _, field := range opts.SearchFields {
-			db = db.Or(field+" LIKE ?", "%"+opts.Search+"%")
-		}
-	}
-
-	if len(opts.OrderBy) > 0 {
-		for _, order := range opts.OrderBy {
-			db = db.Order(order)
-		}
-	}
-
-	if len(opts.Preload) > 0 {
-		for _, preload := range opts.Preload {
-			db = db.Preload(preload)
-		}
-	}
-
-	offset := (opts.Page - 1) * opts.PageSize
-	err := db.Offset(offset).Limit(opts.PageSize).Find(&entities).Error
-	return entities, err
-}
-
-// FindAll 查询所有符合条件的记录
-func (r *Repository[T]) FindAll(ctx context.Context, query interface{}, args ...interface{}) ([]T, error) {
-	var entities []T
-	err := r.db.WithContext(ctx).Where(query, args...).Find(&entities).Error
-	return entities, err
-}
-
-// FindById 根据ID查询
-func (r *Repository[T]) FindById(ctx context.Context, id uint) (*T, error) {
-	var entity T
-	err := r.db.WithContext(ctx).First(&entity, id).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &entity, nil
-}
-
 // 链式查询方法
 func (r *Repository[T]) Where(query interface{}, args ...interface{}) IRepository[T] {
 	r.db = r.db.Where(query, args...)
@@ -283,12 +341,6 @@ func (r *Repository[T]) Order(value interface{}) IRepository[T] {
 // Select 选择字段
 func (r *Repository[T]) Select(query interface{}, args ...interface{}) IRepository[T] {
 	r.db = r.db.Select(query, args...)
-	return r
-}
-
-// Preload 预加载
-func (r *Repository[T]) Preload(query string, args ...interface{}) IRepository[T] {
-	r.db = r.db.Preload(query, args...)
 	return r
 }
 
@@ -313,28 +365,4 @@ func (r *Repository[T]) Having(query interface{}, args ...interface{}) IReposito
 // Update 更新实体
 func (r *Repository[T]) Update(ctx context.Context, entity *T) error {
 	return r.db.WithContext(ctx).Save(entity).Error
-}
-
-// NewRepository 创建仓储实例
-func NewRepository[T ICrudEntity](db *gorm.DB, entity T) IRepository[T] {
-	return &Repository[T]{
-		db: db,
-	}
-}
-
-// Session 创建新会话，避免污染原有查询
-func (r *Repository[T]) Session() IRepository[T] {
-	return &Repository[T]{
-		db: r.db.Session(&gorm.Session{}),
-	}
-}
-
-func (r *Repository[T]) AddQueryHook(hook QueryHook) IRepository[T] {
-	// 创建新的会话以避免污染原有查询
-	db := r.db.Session(&gorm.Session{})
-	// 注册回调
-	db.Callback().Query().Before("gorm:query").Register("my_hook:before", hook.BeforeQuery)
-	db.Callback().Query().After("gorm:query").Register("my_hook:after", hook.AfterQuery)
-	r.db = db
-	return r
 }

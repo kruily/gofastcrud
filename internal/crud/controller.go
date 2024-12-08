@@ -31,8 +31,8 @@ type ICrudController[T ICrudEntity] interface {
 
 // CrudController 控制器实现
 type CrudController[T ICrudEntity] struct {
-	repository  IRepository[T]
-	config      *CrudConfig
+	Repository  IRepository[T]
+	Config      *CrudConfig
 	entity      T
 	entityName  string // 添加实体名称字段
 	middlewares map[string][]gin.HandlerFunc
@@ -48,14 +48,45 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 	entityName := entityType.Name()
 
 	c := &CrudController[T]{
-		repository:  NewRepository(db, entity),
-		config:      GetConfig(),
+		Repository:  NewRepository(db, entity),
+		Config:      GetConfig(),
 		entity:      entity,
 		entityName:  entityName, // 保存实体名称
 		middlewares: make(map[string][]gin.HandlerFunc),
 	}
 	c.routes = append(c.routes, c.standardRoutes()...)
+
+	// 自动配置预加载
+	c.configurePreloads()
+
 	return c
+}
+
+// configurePreloads 配置预加载
+func (c *CrudController[T]) configurePreloads() {
+	// 获取实体类型
+	entityType := reflect.TypeOf(c.entity)
+	if entityType.Kind() == reflect.Ptr {
+		entityType = entityType.Elem()
+	}
+
+	var preloadFields []string
+	// 遍历所有字段
+	for i := 0; i < entityType.NumField(); i++ {
+		field := entityType.Field(i)
+
+		// 检查是否是关联字段（指针或切片类型）
+		if (field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice) &&
+			field.Tag.Get("gorm") != "" {
+			// 只有带有gorm标签的字段才添加预加载
+			preloadFields = append(preloadFields, field.Name)
+		}
+	}
+
+	// 添加预加载钩子
+	if len(preloadFields) > 0 {
+		c.Repository.Preload(preloadFields...)
+	}
 }
 
 // Create 创建实体
@@ -70,12 +101,12 @@ func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	err := c.repository.Create(ctx, &entity)
+	err := c.Repository.Create(ctx, &entity)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.config.Responser.Success(entity), nil
+	return c.Config.Responser.Success(entity), nil
 }
 
 // GetById 根据ID获取实体
@@ -90,7 +121,7 @@ func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
 		return nil, errors.New("invalid id format")
 	}
 
-	entity, err := c.repository.FindById(ctx, uint(idInt))
+	entity, err := c.Repository.FindById(ctx, uint(idInt))
 	if err != nil {
 		return nil, err
 	}
@@ -99,18 +130,18 @@ func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
 		return nil, errors.New("record not found")
 	}
 
-	return c.config.Responser.Success(entity), nil
+	return c.Config.Responser.Success(entity), nil
 }
 
 // List 获取实体列表
 func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
 	// 获取查询参数
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", strconv.Itoa(c.config.DefaultPageSize)))
+	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", strconv.Itoa(c.Config.DefaultPageSize)))
 
 	// 限制页面大小
-	if pageSize > c.config.MaxPageSize {
-		pageSize = c.config.MaxPageSize
+	if pageSize > c.Config.MaxPageSize {
+		pageSize = c.Config.MaxPageSize
 	}
 
 	// 构建查询选项
@@ -121,18 +152,18 @@ func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
 	}
 
 	// 执行查询
-	items, err := c.repository.Find(ctx, &c.entity, opts)
+	items, err := c.Repository.Find(ctx, &c.entity, opts)
 	if err != nil {
 		return nil, err
 	}
 
 	// 获取总数
-	total, err := c.repository.Count(ctx, &c.entity)
+	total, err := c.Repository.Count(ctx, &c.entity)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.config.Responser.List(items, total), nil
+	return c.Config.Responser.List(items, total), nil
 }
 
 // Update 更新实体
@@ -159,11 +190,11 @@ func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 
 	entity.SetID(uint(idInt))
 
-	if err := c.repository.Update(ctx, &entity); err != nil {
+	if err := c.Repository.Update(ctx, &entity); err != nil {
 		return nil, err
 	}
 
-	return c.config.Responser.Success(entity), nil
+	return c.Config.Responser.Success(entity), nil
 }
 
 // Delete 删除实体
@@ -178,12 +209,12 @@ func (c *CrudController[T]) Delete(ctx *gin.Context) (interface{}, error) {
 		return nil, errors.New("invalid id format")
 	}
 
-	opts := []DeleteOptions{{Force: !c.config.SoftDelete}}
-	if err := c.repository.DeleteById(ctx, uint(idInt), opts...); err != nil {
+	opts := []DeleteOptions{{Force: !c.Config.SoftDelete}}
+	if err := c.Repository.DeleteById(ctx, uint(idInt), opts...); err != nil {
 		return nil, err
 	}
 
-	return c.config.Responser.Success(nil), nil
+	return c.Config.Responser.Success(nil), nil
 }
 
 // UseMiddleware 添加中间件
@@ -201,7 +232,7 @@ func (c *CrudController[T]) WrapHandler(handler types.HandlerFunc) gin.HandlerFu
 	return func(ctx *gin.Context) {
 		result, err := handler(ctx)
 		if err != nil {
-			ctx.JSON(400, c.config.Responser.Error(err))
+			ctx.JSON(400, c.Config.Responser.Error(err))
 			return
 		}
 		ctx.JSON(200, result)

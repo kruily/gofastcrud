@@ -12,12 +12,15 @@ import (
 
 // Generator Swagger 文档生成器
 type Generator struct {
-	docs map[string]*spec.Swagger
+	docs           map[string]*spec.Swagger
+	processedTypes map[reflect.Type]*spec.Schema
 }
 
+// NewGenerator 创建生成器实例
 func NewGenerator() *Generator {
 	return &Generator{
-		docs: make(map[string]*spec.Swagger),
+		docs:           make(map[string]*spec.Swagger),
+		processedTypes: make(map[reflect.Type]*spec.Schema),
 	}
 }
 
@@ -68,6 +71,7 @@ func (g *Generator) RegisterEntityWithVersion(entityType reflect.Type, basePath 
 
 	// 收集所有相关的模型定义
 	definitions := make(spec.Definitions)
+	g.processedTypes = make(map[reflect.Type]*spec.Schema) // 重置已处理类型的map
 	definitions[entityName] = *g.generateSchema(entityType)
 
 	// 收集请求和响应模型
@@ -80,6 +84,7 @@ func (g *Generator) RegisterEntityWithVersion(entityType reflect.Type, basePath 
 				}
 				reqName := reqType.Name()
 				if reqName != "" && reqName != entityName {
+					g.processedTypes = make(map[reflect.Type]*spec.Schema) // 重置已处理类型的map
 					definitions[reqName] = *g.generateSchema(reqType)
 				}
 			}
@@ -90,6 +95,7 @@ func (g *Generator) RegisterEntityWithVersion(entityType reflect.Type, basePath 
 				}
 				respName := respType.Name()
 				if respName != "" && respName != entityName {
+					g.processedTypes = make(map[reflect.Type]*spec.Schema) // 重置已处理类型的map
 					definitions[respName] = *g.generateSchema(respType)
 				}
 			}
@@ -191,48 +197,6 @@ func (g *Generator) GetAllSwagger() interface{} {
 	return versionDocs
 }
 
-// mergeSwaggers 合并所有实体的 Swagger 文档
-func (g *Generator) mergeSwaggers() *spec.Swagger {
-	merged := &spec.Swagger{
-		SwaggerProps: spec.SwaggerProps{
-			Swagger: "2.0",
-			Info: &spec.Info{
-				InfoProps: spec.InfoProps{
-					Title:       "Fast CRUD API",
-					Description: "Auto-generated API documentation",
-					Version:     "1.0",
-				},
-			},
-			Host:        "localhost:8080",
-			BasePath:    "/api/v1",
-			Schemes:     []string{"http"},
-			Consumes:    []string{"application/json"},
-			Produces:    []string{"application/json"},
-			Paths:       &spec.Paths{Paths: make(map[string]spec.PathItem)},
-			Definitions: make(spec.Definitions),
-			Tags:        []spec.Tag{},
-		},
-	}
-
-	// 合并所有实体的路径、定义和标签
-	for _, swagger := range g.docs {
-		// 合并路径
-		for path, item := range swagger.Paths.Paths {
-			merged.Paths.Paths[path] = item
-		}
-		// 合并定义
-		for name, schema := range swagger.Definitions {
-			merged.Definitions[name] = schema
-		}
-		// 合并标签
-		if swagger.Tags != nil {
-			merged.Tags = append(merged.Tags, swagger.Tags...)
-		}
-	}
-
-	return merged
-}
-
 // generateSchema 生成实体的 Schema
 func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 	// 处理指针类型
@@ -240,28 +204,16 @@ func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 		t = t.Elem()
 	}
 
-	// 处理切片类型
-	if t.Kind() == reflect.Slice {
-		elemSchema := g.generateSchema(t.Elem())
+	// 检查是否已经处理过该类型
+	if _, exists := g.processedTypes[t]; exists {
 		return &spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"array"},
-				Items: &spec.SchemaOrArray{
-					Schema: elemSchema,
-				},
+				Ref: spec.MustCreateRef(fmt.Sprintf("#/definitions/%s", t.Name())),
 			},
 		}
 	}
 
-	// 确保是结构体类型
-	if t.Kind() != reflect.Struct {
-		return &spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-			},
-		}
-	}
-
+	// 创建基础schema
 	schema := &spec.Schema{
 		SchemaProps: spec.SchemaProps{
 			Type:       []string{"object"},
@@ -270,36 +222,62 @@ func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 		},
 	}
 
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+	// 先将schema加入到已处理map中，避免循环引用
+	g.processedTypes[t] = schema
 
-		// 处理嵌入字段
-		if field.Anonymous {
-			embeddedSchema := g.generateSchema(field.Type)
-			for name, prop := range embeddedSchema.SchemaProps.Properties {
-				schema.Properties[name] = prop
+	// 处理字段
+	if t.Kind() == reflect.Struct {
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+
+			// 跳过非导出字段
+			if !field.IsExported() {
+				continue
 			}
-			continue
+
+			// 处理嵌入字段
+			if field.Anonymous {
+				if field.Type.Kind() == reflect.Ptr {
+					field.Type = field.Type.Elem()
+				}
+				if field.Type.Name() == "BaseEntity" {
+					continue
+				}
+				embeddedSchema := g.generateSchema(field.Type)
+				for name, prop := range embeddedSchema.Properties {
+					schema.Properties[name] = prop
+				}
+				continue
+			}
+
+			// 处理 json 标签
+			jsonTag := field.Tag.Get("json")
+			if jsonTag == "-" || jsonTag == ",inline" {
+				continue
+			}
+
+			name := field.Name
+			if jsonTag != "" {
+				parts := strings.Split(jsonTag, ",")
+				if parts[0] != "" {
+					name = parts[0]
+				}
+			}
+
+			// 生成字段的 schema
+			fieldSchema := g.getFieldSchema(field)
+			schema.Properties[name] = fieldSchema
+
+			// 处理必填字段
+			if required := field.Tag.Get("binding"); required == "required" {
+				schema.Required = append(schema.Required, name)
+			}
 		}
-
-		// 处理 json 标签
-		jsonTag := field.Tag.Get("json")
-		if jsonTag == "-" {
-			continue
-		}
-
-		name := field.Name
-		if jsonTag != "" {
-			name = strings.Split(jsonTag, ",")[0]
-		}
-
-		// 生成字段的 schema
-		fieldSchema := g.getFieldSchema(field)
-		schema.Properties[name] = fieldSchema
-
-		// 处理必填字段
-		if required := field.Tag.Get("binding"); required == "required" {
-			schema.Required = append(schema.Required, name)
+	} else if t.Kind() == reflect.Slice {
+		elemSchema := g.generateSchema(t.Elem())
+		schema.Type = []string{"array"}
+		schema.Items = &spec.SchemaOrArray{
+			Schema: elemSchema,
 		}
 	}
 
@@ -310,16 +288,6 @@ func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 func (g *Generator) getFieldSchema(field reflect.StructField) spec.Schema {
 	schema := spec.Schema{
 		SchemaProps: spec.SchemaProps{},
-	}
-
-	// 添加描述
-	if description := field.Tag.Get("description"); description != "" {
-		schema.Description = description
-	}
-
-	// 添加示例
-	if example := field.Tag.Get("example"); example != "" {
-		schema.Example = example
 	}
 
 	// 处理字段类型
@@ -348,17 +316,26 @@ func (g *Generator) getFieldSchema(field reflect.StructField) spec.Schema {
 			schema.Type = []string{"string"}
 			schema.Format = "date-time"
 		} else {
-			embeddedSchema := g.generateSchema(field.Type)
-			schema = *embeddedSchema
+			return *g.generateSchema(field.Type)
 		}
 	case reflect.Ptr:
-		schema = *g.generateSchema(field.Type.Elem())
+		return *g.generateSchema(field.Type.Elem())
 	case reflect.Slice:
-		schema.Type = []string{"array"}
 		elemSchema := g.generateSchema(field.Type.Elem())
+		schema.Type = []string{"array"}
 		schema.Items = &spec.SchemaOrArray{
 			Schema: elemSchema,
 		}
+	}
+
+	// 添加描述
+	if description := field.Tag.Get("description"); description != "" {
+		schema.Description = description
+	}
+
+	// 添加示例
+	if example := field.Tag.Get("example"); example != "" {
+		schema.Example = example
 	}
 
 	return schema

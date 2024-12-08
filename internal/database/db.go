@@ -9,6 +9,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"github.com/kruily/GoFastCrud/internal/config"
 )
@@ -42,7 +43,7 @@ func (d *Database) Init(cfg *config.DatabaseConfig) error {
 		}
 		dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
 			cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Database, cfg.Charset)
-		d.db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		d.db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
 	case "postgres":
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
 			cfg.Host, cfg.Username, cfg.Password, cfg.Database, cfg.Port)

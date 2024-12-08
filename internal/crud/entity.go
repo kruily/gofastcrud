@@ -14,9 +14,9 @@ type ICrudEntity interface {
 
 // BaseEntity 基础实体
 type BaseEntity struct {
-	ID        uint      `json:"id" example:"1" description:"唯一标识符"`
-	CreatedAt time.Time `json:"created_at" example:"2024-03-20T10:00:00Z" description:"创建时间"`
-	UpdatedAt time.Time `json:"updated_at" example:"2024-03-20T10:00:00Z" description:"更新时间"`
+	ID        uint      `gorm:"primarykey" json:"id" example:"1" description:"唯一标识符"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at" example:"2024-03-20T10:00:00Z" description:"创建时间"`
+	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at" example:"2024-03-20T10:00:00Z" description:"更新时间"`
 }
 
 // GetID 获取ID

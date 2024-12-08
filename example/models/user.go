@@ -6,10 +6,8 @@ import "github.com/kruily/GoFastCrud/internal/crud"
 // @Description 用户信息
 type User struct {
 	*crud.BaseEntity
-	ID       uint   `json:"id" gorm:"primarykey"`
-	Username string `json:"username" binding:"required" validate:"required,min=3,max=32"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=6"`
+	Username string `json:"username" binding:"required"`
+	Email    string `json:"email"`
 }
 
 func (User) Table() string {

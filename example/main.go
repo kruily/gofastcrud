@@ -52,6 +52,7 @@ func main() {
 	db.RegisterModels(
 		&models.User{},
 		&models.Book{},
+		&models.Category{},
 		// 添加其他模型
 	)
 
@@ -93,12 +94,14 @@ func main() {
 
 	// 注册书籍控制器
 	crud.Register[*models.Book](factory, "/books", srv)
+	// 注册分类控制器
+	crud.Register[*models.Category](factory, "/categories", srv)
 	// 为控制器添加中间件
 	// crud.Register[*models.Book](factory, "/books", srv).
 	// 	UseMiddleware("*", gin.Logger())
 
 	// 运行服务（包含优雅启停）
 	if err := srv.Run(); err != nil {
-		log.Fatal("Server error: %v", map[string]interface{}{"error": err})
+		log.Fatalf("Server error: %v", err)
 	}
 }
