@@ -343,12 +343,43 @@ func (g *Generator) getFieldSchema(field reflect.StructField) spec.Schema {
 
 // generateOperation 生成操作文档
 func (g *Generator) generateOperation(route types.APIRoute, entityName string) *spec.Operation {
+	// 生成 operationId
+	operationId := ""
+	if len(strings.Split(route.Path, "/")) > 1 {
+		parts := strings.Split(route.Path, "/")
+		var pathParts []string
+		for _, part := range parts {
+			if part != "" && !strings.HasPrefix(part, ":") {
+				// 首字母大写
+				pathParts = append(pathParts, strings.ToUpper(part[0:1])+part[1:])
+			}
+		}
+		operationId = fmt.Sprintf("%s%s%s",
+			strings.ToLower(route.Method),
+			strings.Replace(entityName, " ", "", -1),
+			strings.Join(pathParts, ""),
+		)
+	} else {
+		operationId = fmt.Sprintf("%s%s",
+			strings.ToLower(route.Method),
+			strings.Replace(entityName, " ", "", -1),
+		)
+	}
+	if route.Path == "/:id" {
+		operationId += "ById"
+	}
+
 	operation := &spec.Operation{
 		OperationProps: spec.OperationProps{
 			Tags:        route.Tags,
 			Summary:     route.Summary,
 			Description: route.Description,
-			Responses:   &spec.Responses{},
+			ID:          operationId,
+			Responses: &spec.Responses{
+				ResponsesProps: spec.ResponsesProps{
+					StatusCodeResponses: make(map[int]spec.Response),
+				},
+			},
 		},
 	}
 
@@ -363,6 +394,26 @@ func (g *Generator) generateOperation(route types.APIRoute, entityName string) *
 			},
 			SimpleSchema: spec.SimpleSchema{Type: "integer"},
 		})
+	}
+
+	// 处理查询参数
+	if len(route.Parameters) > 0 {
+		for _, param := range route.Parameters {
+			parameter := spec.Parameter{
+				ParamProps: spec.ParamProps{
+					Name:        param.Name,
+					In:          param.In,
+					Description: param.Description,
+					Required:    param.Required,
+				},
+				SimpleSchema: spec.SimpleSchema{
+					Type:    param.Schema.Type,
+					Format:  param.Schema.Format,
+					Default: param.Schema.Default,
+				},
+			}
+			operation.Parameters = append(operation.Parameters, parameter)
+		}
 	}
 
 	// 添加请求体
@@ -399,6 +450,33 @@ func (g *Generator) generateOperation(route types.APIRoute, entityName string) *
 				},
 			},
 		}
+	}
+
+	// 添加错误响应
+	operation.Responses.StatusCodeResponses[400] = spec.Response{
+		ResponseProps: spec.ResponseProps{
+			Description: "Bad Request",
+		},
+	}
+	operation.Responses.StatusCodeResponses[401] = spec.Response{
+		ResponseProps: spec.ResponseProps{
+			Description: "Unauthorized",
+		},
+	}
+	operation.Responses.StatusCodeResponses[403] = spec.Response{
+		ResponseProps: spec.ResponseProps{
+			Description: "Forbidden",
+		},
+	}
+	operation.Responses.StatusCodeResponses[404] = spec.Response{
+		ResponseProps: spec.ResponseProps{
+			Description: "Not Found",
+		},
+	}
+	operation.Responses.StatusCodeResponses[500] = spec.Response{
+		ResponseProps: spec.ResponseProps{
+			Description: "Internal Server Error",
+		},
 	}
 
 	return operation

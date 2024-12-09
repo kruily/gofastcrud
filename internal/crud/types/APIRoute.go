@@ -12,8 +12,25 @@ type APIRoute struct {
 	Tags        []string          // 标签分组
 	Summary     string            `doc:"summary"`     // 摘要
 	Description string            `doc:"description"` // 描述
+	Parameters  []Parameter       // 参数
 	Request     interface{}       // 请求结构体
 	Response    interface{}       // 响应结构体
 	Handler     HandlerFunc       // 处理函数
 	Middlewares []gin.HandlerFunc // 中间件
+}
+
+// Parameter API参数
+type Parameter struct {
+	Name        string `json:"name"`
+	In          string `json:"in"` // query, path, header, cookie
+	Description string `json:"description,omitempty"`
+	Required    bool   `json:"required,omitempty"`
+	Schema      Schema `json:"schema"`
+}
+
+// Schema 参数架构
+type Schema struct {
+	Type    string      `json:"type,omitempty"`
+	Format  string      `json:"format,omitempty"`
+	Default interface{} `json:"default,omitempty"`
 }

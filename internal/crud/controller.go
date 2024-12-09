@@ -1,13 +1,15 @@
 package crud
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kruily/GoFastCrud/internal/crud/options"
 	"github.com/kruily/GoFastCrud/internal/crud/types"
+	"github.com/kruily/GoFastCrud/pkg/errors"
 	"github.com/kruily/GoFastCrud/pkg/validator"
 	"gorm.io/gorm"
 )
@@ -113,12 +115,12 @@ func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
 func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
 	id := ctx.Param("id")
 	if id == "" {
-		return nil, errors.New("missing id parameter")
+		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
 	}
 
 	idInt, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		return nil, errors.New("invalid id format")
+		return nil, errors.New(errors.ErrNotFound, "invalid id format")
 	}
 
 	entity, err := c.Repository.FindById(ctx, uint(idInt))
@@ -127,15 +129,15 @@ func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
 	}
 
 	if entity == nil {
-		return nil, errors.New("record not found")
+		return nil, errors.New(errors.ErrNotFound, "record not found")
 	}
 
 	return c.Config.Responser.Success(entity), nil
 }
 
-// List 获取实体列表
-func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
-	// 获取查询参数
+// buildQueryOptions 构建查询选项
+func (c *CrudController[T]) buildQueryOptions(ctx *gin.Context) options.QueryOptions {
+	// 获取基础分页参数
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", strconv.Itoa(c.Config.DefaultPageSize)))
 
@@ -145,11 +147,118 @@ func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
 	}
 
 	// 构建查询选项
-	opts := QueryOptions{
+	opts := options.QueryOptions{
 		Page:     page,
 		PageSize: pageSize,
 		OrderBy:  []string{ctx.DefaultQuery("order_by", "id desc")},
+		Where:    make(map[string]interface{}),
+		Filter:   make(map[string]interface{}),
 	}
+
+	// 处理搜索
+	if search := ctx.Query("search"); search != "" {
+		opts.Search = search
+		opts.SearchFields = strings.Split(ctx.DefaultQuery("search_fields", "id"), ",")
+	}
+
+	// 处理过滤条件
+	c.buildFilterOptions(ctx, &opts)
+
+	// 处理预加载关系
+	if preload := ctx.Query("preload"); preload != "" {
+		opts.Preload = strings.Split(preload, ",")
+	}
+
+	// 处理字段选择
+	if fields := ctx.Query("fields"); fields != "" {
+		opts.Select = strings.Split(fields, ",")
+	}
+
+	return opts
+}
+
+// buildFilterOptions 构建过滤选项
+func (c *CrudController[T]) buildFilterOptions(ctx *gin.Context, opts *options.QueryOptions) {
+	querys := ctx.Request.URL.Query()
+	for key, values := range querys {
+		// 跳过特殊参数
+		if isSpecialParam(key) {
+			continue
+		}
+
+		// 处理范围查询
+		if strings.HasSuffix(key, "_gt") || strings.HasSuffix(key, "_lt") ||
+			strings.HasSuffix(key, "_gte") || strings.HasSuffix(key, "_lte") {
+			field := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(
+				strings.TrimSuffix(key, "_gt"), "_lt"), "_gte"), "_lte")
+
+			if strings.HasSuffix(key, "_gt") {
+				opts.Where[field+" > ?"] = values[0]
+			} else if strings.HasSuffix(key, "_lt") {
+				opts.Where[field+" < ?"] = values[0]
+			} else if strings.HasSuffix(key, "_gte") {
+				opts.Where[field+" >= ?"] = values[0]
+			} else if strings.HasSuffix(key, "_lte") {
+				opts.Where[field+" <= ?"] = values[0]
+			}
+			continue
+		}
+
+		// 处理IN查询
+		if strings.HasSuffix(key, "_in") {
+			field := strings.TrimSuffix(key, "_in")
+			opts.Where[field+" IN ?"] = strings.Split(values[0], ",")
+			continue
+		}
+
+		// 处理NULL查询
+		if strings.HasSuffix(key, "_null") {
+			field := strings.TrimSuffix(key, "_null")
+			if values[0] == "true" {
+				opts.Where[field+" IS NULL"] = nil
+			} else {
+				opts.Where[field+" IS NOT NULL"] = nil
+			}
+			continue
+		}
+
+		// 处理模糊查询
+		if strings.HasSuffix(key, "_like") {
+			field := strings.TrimSuffix(key, "_like")
+			opts.Where[field+" LIKE ?"] = "%" + values[0] + "%"
+			continue
+		}
+
+		// 处理普通相等查询
+		if !isSpecialParam(key) {
+			opts.Filter[key] = values[0]
+		}
+	}
+}
+
+// isSpecialParam 检查是否为特殊参数
+func isSpecialParam(key string) bool {
+	specialParams := []string{
+		"page", "page_size", "order_by",
+		"search", "search_fields", "preload",
+		"fields",
+	}
+	for _, param := range specialParams {
+		if key == param {
+			return true
+		}
+	}
+	return false
+}
+
+// buildDeleteOptions 构建删除选项
+func (c *CrudController[T]) buildDeleteOptions() []options.DeleteOptions {
+	return []options.DeleteOptions{{Force: !c.Config.SoftDelete}}
+}
+
+// List 获取实体列表
+func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
+	opts := c.buildQueryOptions(ctx)
 
 	// 执行查询
 	items, err := c.Repository.Find(ctx, &c.entity, opts)
@@ -170,7 +279,7 @@ func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
 func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 	id := ctx.Param("id")
 	if id == "" {
-		return nil, errors.New("missing id parameter")
+		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
 	}
 
 	var entity T
@@ -185,7 +294,7 @@ func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 
 	idInt, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		return nil, errors.New("invalid id format")
+		return nil, errors.New(errors.ErrNotFound, "invalid id format")
 	}
 
 	entity.SetID(uint(idInt))
@@ -201,15 +310,15 @@ func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 func (c *CrudController[T]) Delete(ctx *gin.Context) (interface{}, error) {
 	id := ctx.Param("id")
 	if id == "" {
-		return nil, errors.New("missing id parameter")
+		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
 	}
 
 	idInt, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		return nil, errors.New("invalid id format")
+		return nil, errors.New(errors.ErrNotFound, "invalid id format")
 	}
 
-	opts := []DeleteOptions{{Force: !c.Config.SoftDelete}}
+	opts := c.buildDeleteOptions()
 	if err := c.Repository.DeleteById(ctx, uint(idInt), opts...); err != nil {
 		return nil, err
 	}
@@ -232,7 +341,14 @@ func (c *CrudController[T]) WrapHandler(handler types.HandlerFunc) gin.HandlerFu
 	return func(ctx *gin.Context) {
 		result, err := handler(ctx)
 		if err != nil {
-			ctx.JSON(400, c.Config.Responser.Error(err))
+			var appErr *errors.AppError
+			switch e := err.(type) {
+			case *errors.AppError:
+				appErr = e
+			default:
+				appErr = errors.Wrap(err, errors.ErrInternal, "内部服务器错误")
+			}
+			ctx.JSON(appErr.HTTPStatus(), c.Config.Responser.Error(appErr))
 			return
 		}
 		ctx.JSON(200, result)
@@ -268,6 +384,10 @@ func (c *CrudController[T]) RegisterRoutes(group *gin.RouterGroup) {
 			group.PUT(route.Path, handlers...)
 		case "DELETE":
 			group.DELETE(route.Path, handlers...)
+		case "PATCH":
+			group.PATCH(route.Path, handlers...)
+		case "OPTIONS":
+			group.OPTIONS(route.Path, handlers...)
 		}
 	}
 }
@@ -279,6 +399,7 @@ func (c *CrudController[T]) GetRoutes() []types.APIRoute {
 
 // standardRoutes 标准路由
 func (c *CrudController[T]) standardRoutes() []types.APIRoute {
+
 	return []types.APIRoute{
 		{
 			Path:        "/:id",
@@ -287,16 +408,17 @@ func (c *CrudController[T]) standardRoutes() []types.APIRoute {
 			Summary:     fmt.Sprintf("Get %s by ID", c.entityName),
 			Description: fmt.Sprintf("Get a single %s by its ID", c.entityName),
 			Handler:     c.GetById,
-			Response:    c.entity, // 添加响应类型
+			Response:    c.entity,
 		},
 		{
 			Path:        "",
 			Method:      "GET",
 			Tags:        []string{c.entityName},
 			Summary:     fmt.Sprintf("List %s", c.entityName),
-			Description: fmt.Sprintf("Get a list of %s with pagination", c.entityName),
+			Description: fmt.Sprintf("Get a list of %s with pagination and filters", c.entityName),
 			Handler:     c.List,
-			Response:    []T{}, // 添加响应类型
+			Response:    []T{},
+			Parameters:  c.queryParams(),
 		},
 		{
 			Path:        "",
@@ -305,8 +427,8 @@ func (c *CrudController[T]) standardRoutes() []types.APIRoute {
 			Summary:     fmt.Sprintf("Create %s", c.entityName),
 			Description: fmt.Sprintf("Create a new %s", c.entityName),
 			Handler:     c.Create,
-			Request:     c.entity, // 添加请求类型
-			Response:    c.entity, // 添加响应类型
+			Request:     c.entity,
+			Response:    c.entity,
 		},
 		{
 			Path:        "/:id",
@@ -315,8 +437,8 @@ func (c *CrudController[T]) standardRoutes() []types.APIRoute {
 			Summary:     fmt.Sprintf("Update %s", c.entityName),
 			Description: fmt.Sprintf("Update an existing %s", c.entityName),
 			Handler:     c.Update,
-			Request:     c.entity, // 添加请求类型
-			Response:    c.entity, // 添加响应类型
+			Request:     c.entity,
+			Response:    c.entity,
 		},
 		{
 			Path:        "/:id",
@@ -327,6 +449,139 @@ func (c *CrudController[T]) standardRoutes() []types.APIRoute {
 			Handler:     c.Delete,
 		},
 	}
+}
+
+// queryParams 获取查询参数
+func (c *CrudController[T]) queryParams() []types.Parameter {
+	// 获取实体类型的字段
+	entityType := reflect.TypeOf(c.entity)
+	if entityType.Kind() == reflect.Ptr {
+		entityType = entityType.Elem()
+	}
+
+	// 收集所有可查询字段
+	queryFields := make([]string, 0)
+	for i := 0; i < entityType.NumField(); i++ {
+		field := entityType.Field(i)
+		// 跳过非导出字段和特殊字段
+		if !field.IsExported() || field.Anonymous ||
+			field.Type.Kind() == reflect.Struct ||
+			field.Type.Kind() == reflect.Slice ||
+			field.Type.Kind() == reflect.Map ||
+			field.Type.Kind() == reflect.Ptr {
+			continue
+		}
+		jsonTag := field.Tag.Get("json")
+		if jsonTag == "-" {
+			continue
+		}
+		// 获取字段名（优先使用json tag）
+		fieldName := field.Name
+		if jsonTag != "" {
+			parts := strings.Split(jsonTag, ",")
+			if parts[0] != "" {
+				fieldName = parts[0]
+			}
+		}
+		queryFields = append(queryFields, fieldName)
+	}
+
+	// 生成查询参数
+	queryParams := []types.Parameter{
+		{
+			Name:        "page",
+			In:          "query",
+			Description: "Page number",
+			Schema:      types.Schema{Type: "integer", Default: "1"},
+		},
+		{
+			Name:        "page_size",
+			In:          "query",
+			Description: "Number of items per page",
+			Schema:      types.Schema{Type: "integer", Default: "10"},
+		},
+		{
+			Name:        "order_by",
+			In:          "query",
+			Description: "Order by field (e.g., id desc, name asc)",
+			Schema:      types.Schema{Type: "string", Default: "id desc"},
+		},
+		{
+			Name:        "search",
+			In:          "query",
+			Description: "Search keyword",
+			Schema:      types.Schema{Type: "string"},
+		},
+		{
+			Name:        "search_fields",
+			In:          "query",
+			Description: "Fields to search in (comma-separated)",
+			Schema:      types.Schema{Type: "string", Default: strings.Join(queryFields, ",")},
+		},
+		{
+			Name:        "preload",
+			In:          "query",
+			Description: "Relations to preload (comma-separated)",
+			Schema:      types.Schema{Type: "string"},
+		},
+		{
+			Name:        "fields",
+			In:          "query",
+			Description: "Fields to select (comma-separated)",
+			Schema:      types.Schema{Type: "string"},
+		},
+	}
+
+	// 为每个字段添加过滤参数
+	for _, field := range queryFields {
+		// 大于/小于过滤
+		queryParams = append(queryParams,
+			types.Parameter{
+				Name:        field + "_gt",
+				In:          "query",
+				Description: fmt.Sprintf("Greater than filter for %s", field),
+				Schema:      types.Schema{Type: "string"},
+			},
+			types.Parameter{
+				Name:        field + "_lt",
+				In:          "query",
+				Description: fmt.Sprintf("Less than filter for %s", field),
+				Schema:      types.Schema{Type: "string"},
+			},
+			types.Parameter{
+				Name:        field + "_gte",
+				In:          "query",
+				Description: fmt.Sprintf("Greater than or equal filter for %s", field),
+				Schema:      types.Schema{Type: "string"},
+			},
+			types.Parameter{
+				Name:        field + "_lte",
+				In:          "query",
+				Description: fmt.Sprintf("Less than or equal filter for %s", field),
+				Schema:      types.Schema{Type: "string"},
+			},
+			types.Parameter{
+				Name:        field + "_in",
+				In:          "query",
+				Description: fmt.Sprintf("IN filter for %s (comma-separated values)", field),
+				Schema:      types.Schema{Type: "string"},
+			},
+			types.Parameter{
+				Name:        field + "_like",
+				In:          "query",
+				Description: fmt.Sprintf("LIKE filter for %s", field),
+				Schema:      types.Schema{Type: "string"},
+			},
+			types.Parameter{
+				Name:        field + "_null",
+				In:          "query",
+				Description: fmt.Sprintf("NULL filter for %s (true|false)", field),
+				Schema:      types.Schema{Type: "string"},
+			},
+		)
+	}
+
+	return queryParams
 }
 
 // GetEntityName 获取实体名称

@@ -87,8 +87,15 @@ func (s *Server) Run() error {
 		s.EnableSwagger()
 	}
 
+	// 获取所有可用的API版本
+	versions := s.versionManager.GetAvailableVersions()
+	versionStrs := make([]string, len(versions))
+	for i, v := range versions {
+		versionStrs[i] = string(v)
+	}
+
 	// 注册主页路由
-	s.router.GET("/", gin.WrapH(templates.HomeHandler()))
+	s.router.GET("/", gin.WrapH(templates.HomeHandler(versionStrs)))
 
 	// 启动服务
 	go func() {

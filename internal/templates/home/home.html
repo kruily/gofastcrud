@@ -93,6 +93,47 @@
                 margin-bottom: 0.5rem;
             }
         }
+
+        /* 添加下拉菜单样式 */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 4px;
+            margin-top: 4px;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-content a {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            transition: background 0.3s;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+            color: #1890ff;
+        }
+
+        /* 修改链接按钮样式 */
+        .link-button.with-arrow::after {
+            content: "▼";
+            margin-left: 8px;
+            font-size: 0.8em;
+        }
     </style>
 </head>
 <body>
@@ -103,7 +144,14 @@
         </p>
 
         <div class="links">
-            <a href="/swagger/index.html" class="link-button">API Documentation</a>
+            <div class="dropdown">
+                <a href="#" class="link-button with-arrow">API Documentation</a>
+                <div class="dropdown-content">
+                    {{range .APIVersions}}
+                    <a href="/api/{{.}}/swagger/index.html">Version {{.}}</a>
+                    {{end}}
+                </div>
+            </div>
             <a href="https://github.com/kruily/GoFastCrud" class="link-button">GitHub Repository</a>
         </div>
 
@@ -119,6 +167,10 @@
             <div class="status-item">
                 <span>Go Version</span>
                 <span>{{.GoVersion}}</span>
+            </div>
+            <div class="status-item">
+                <span>API Versions</span>
+                <span>{{range $i, $v := .APIVersions}}{{if $i}}, {{end}}{{$v}}{{end}}</span>
             </div>
         </div>
     </div>

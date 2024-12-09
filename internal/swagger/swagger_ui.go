@@ -51,10 +51,6 @@ func SwaggerUIHandler(w http.ResponseWriter, r *http.Request, versions []string,
 			"CurrentVersion": currentVersion,
 		}
 
-		// 添加调试信息
-		log.Printf("Template data: %+v", data)
-		log.Printf("Version infos: %+v", versionInfos)
-
 		if err := templates.SwaggerUITemplate(w, data); err != nil {
 			log.Printf("Template error: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)

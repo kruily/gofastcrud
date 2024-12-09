@@ -10,7 +10,7 @@ import (
 	"github.com/kruily/GoFastCrud/internal/crud"
 	"github.com/kruily/GoFastCrud/internal/database"
 	"github.com/kruily/GoFastCrud/internal/server"
-	"github.com/kruily/GoFastCrud/pkg/env"
+	"github.com/kruily/GoFastCrud/pkg/utils"
 )
 
 // @title Fast CRUD API
@@ -24,7 +24,7 @@ func init() {
 		log.Fatalf("无法获取项目根目录: %v", err)
 	}
 	// 加载环境变量
-	env.LoadEnv(projectRoot)
+	utils.LoadEnv(projectRoot)
 }
 
 func main() {
