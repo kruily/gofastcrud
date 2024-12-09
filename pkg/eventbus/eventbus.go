@@ -2,7 +2,6 @@ package eventbus
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"sync"
 	"time"
@@ -83,14 +82,27 @@ func (b *EventBus) Subscribe(eventName string, handler EventHandler) {
 
 // SubscribeAsync 异步订阅事件
 func (b *EventBus) SubscribeAsync(eventName string, handler EventHandler) {
-	b.Subscribe(eventName, func(ctx context.Context, event Event) error {
-		select {
-		case b.asyncHandler <- eventWrapper{ctx: ctx, event: event, handler: handler}:
-			return nil
-		default:
-			return fmt.Errorf("event bus queue is full")
-		}
-	})
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if _, ok := b.handlers[eventName]; !ok {
+		b.handlers[eventName] = make([]EventHandler, 0)
+	}
+
+	// 直接添加异步处理器
+	asyncHandler := func(ctx context.Context, event Event) error {
+		b.wg.Add(1)
+		go func() {
+			defer b.wg.Done()
+			timeoutCtx, cancel := context.WithTimeout(ctx, b.timeout)
+			defer cancel()
+
+			handler(timeoutCtx, event)
+		}()
+		return nil
+	}
+
+	b.handlers[eventName] = append(b.handlers[eventName], asyncHandler)
 }
 
 // Publish 发布事件（同步）
