@@ -7,10 +7,12 @@ type Response struct {
 	Data    interface{} `json:"data"`
 }
 
-// ListResponse 列表响应结构
-type ListResponse struct {
-	Items interface{} `json:"items"`
+// PagenationResponse 分页响应结构
+type PagenationResponse struct {
+	List  interface{} `json:"list"`
 	Total int64       `json:"total"`
+	Page  int         `json:"page"`
+	Size  int         `json:"size"`
 }
 
 // DefaultResponseHandler 默认响应处理器
@@ -34,14 +36,16 @@ func (h *DefaultResponseHandler) Error(err error) interface{} {
 	}
 }
 
-// List 处理列表响应
-func (h *DefaultResponseHandler) List(items interface{}, total int64) interface{} {
+// Pagenation 处理列表响应
+func (h *DefaultResponseHandler) Pagenation(items interface{}, total int64, page int, size int) interface{} {
 	return Response{
 		Code:    200,
 		Message: "success",
-		Data: ListResponse{
-			Items: items,
+		Data: PagenationResponse{
+			List:  items,
 			Total: total,
+			Page:  page,
+			Size:  size,
 		},
 	}
 }

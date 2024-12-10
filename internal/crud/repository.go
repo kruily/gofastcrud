@@ -16,16 +16,16 @@ type IRepository[T ICrudEntity] interface {
 	// 基础操作
 	Create(ctx context.Context, entity *T) error
 	Update(ctx context.Context, entity *T) error
-	Delete(ctx context.Context, entity *T, opts ...options.DeleteOptions) error
-	DeleteById(ctx context.Context, id uint, opts ...options.DeleteOptions) error
+	Delete(ctx context.Context, entity *T, opts ...*options.DeleteOptions) error
+	DeleteById(ctx context.Context, id uint, opts ...*options.DeleteOptions) error
 	FindById(ctx context.Context, id uint) (*T, error)
-	Find(ctx context.Context, entity *T, opts options.QueryOptions) ([]T, error)
+	Find(ctx context.Context, entity *T, opts *options.QueryOptions) ([]T, error)
 	Count(ctx context.Context, entity *T) (int64, error)
 
 	// 批量操作
-	BatchCreate(ctx context.Context, entities []T, opts ...options.BatchOptions) error
+	BatchCreate(ctx context.Context, entities []T, opts ...*options.BatchOptions) error
 	BatchUpdate(ctx context.Context, entities []T) error
-	BatchDelete(ctx context.Context, ids []uint, opts ...options.DeleteOptions) error
+	BatchDelete(ctx context.Context, ids []uint, opts ...*options.DeleteOptions) error
 
 	// 条件查询
 	FindOne(ctx context.Context, query interface{}, args ...interface{}) (*T, error)
@@ -142,7 +142,7 @@ func (r *Repository[T]) FindOne(ctx context.Context, query interface{}, args ...
 }
 
 // Find 查询实体列表
-func (r *Repository[T]) Find(ctx context.Context, entity *T, opts options.QueryOptions) ([]T, error) {
+func (r *Repository[T]) Find(ctx context.Context, entity *T, opts *options.QueryOptions) ([]T, error) {
 	var entities []T
 	db := r.applyPreloads(r.db.WithContext(ctx).Model(entity))
 
@@ -182,7 +182,7 @@ func (r *Repository[T]) Create(ctx context.Context, entity *T) error {
 }
 
 // BatchCreate 批量创建
-func (r *Repository[T]) BatchCreate(ctx context.Context, entities []T, opts ...options.BatchOptions) error {
+func (r *Repository[T]) BatchCreate(ctx context.Context, entities []T, opts ...*options.BatchOptions) error {
 	batchSize := 100
 	if len(opts) > 0 && opts[0].BatchSize > 0 {
 		batchSize = opts[0].BatchSize
@@ -201,10 +201,10 @@ func (r *Repository[T]) Page(ctx context.Context, page int, pageSize int) ([]T, 
 	}
 
 	// 使用查询选项
-	opts := options.QueryOptions{
-		Page:     page,
-		PageSize: pageSize,
-	}
+	opts := options.NewQueryOptions(
+		options.WithPage(page),
+		options.WithPageSize(pageSize),
+	)
 	db = opts.ApplyQueryOptions(db)
 
 	if err := db.Find(&entities).Error; err != nil {
@@ -257,7 +257,7 @@ func (r *Repository[T]) Min(ctx context.Context, field string) (float64, error) 
 }
 
 // BatchDelete 批量删除
-func (r *Repository[T]) BatchDelete(ctx context.Context, ids []uint, opts ...options.DeleteOptions) error {
+func (r *Repository[T]) BatchDelete(ctx context.Context, ids []uint, opts ...*options.DeleteOptions) error {
 	return r.db.WithContext(ctx).Delete(new(T), ids).Error
 }
 
@@ -295,7 +295,7 @@ func (r *Repository[T]) CountField(ctx context.Context, field string) (int64, er
 }
 
 // Delete 删除实体
-func (r *Repository[T]) Delete(ctx context.Context, entity *T, opts ...options.DeleteOptions) error {
+func (r *Repository[T]) Delete(ctx context.Context, entity *T, opts ...*options.DeleteOptions) error {
 	if len(opts) > 0 {
 		if opts[0].Force {
 			return r.db.WithContext(ctx).Unscoped().Delete(entity).Error
@@ -311,7 +311,7 @@ func (r *Repository[T]) Delete(ctx context.Context, entity *T, opts ...options.D
 }
 
 // DeleteById 根据ID删除
-func (r *Repository[T]) DeleteById(ctx context.Context, id uint, opts ...options.DeleteOptions) error {
+func (r *Repository[T]) DeleteById(ctx context.Context, id uint, opts ...*options.DeleteOptions) error {
 	entity := new(T)
 	return r.Delete(ctx, entity, opts...)
 }

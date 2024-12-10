@@ -6,7 +6,7 @@ import "github.com/kruily/GoFastCrud/pkg/utils"
 type ICrudResponse interface {
 	Success(data interface{}) interface{}
 	Error(err error) interface{}
-	List(items interface{}, total int64) interface{}
+	Pagenation(items interface{}, total int64, page int, size int) interface{}
 }
 
 // CrudConfig 通用CRUD配置

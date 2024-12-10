@@ -135,129 +135,9 @@ func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
 	return c.Config.Responser.Success(entity), nil
 }
 
-// buildQueryOptions 构建查询选项
-func (c *CrudController[T]) buildQueryOptions(ctx *gin.Context) options.QueryOptions {
-	// 获取基础分页参数
-	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", strconv.Itoa(c.Config.DefaultPageSize)))
-
-	// 限制页面大小
-	if pageSize > c.Config.MaxPageSize {
-		pageSize = c.Config.MaxPageSize
-	}
-
-	// 构建查询选项
-	opts := options.QueryOptions{
-		Page:     page,
-		PageSize: pageSize,
-		OrderBy:  []string{ctx.DefaultQuery("order_by", "id desc")},
-		Where:    make(map[string]interface{}),
-		Filter:   make(map[string]interface{}),
-	}
-
-	// 处理搜索
-	if search := ctx.Query("search"); search != "" {
-		opts.Search = search
-		opts.SearchFields = strings.Split(ctx.DefaultQuery("search_fields", "id"), ",")
-	}
-
-	// 处理过滤条件
-	c.buildFilterOptions(ctx, &opts)
-
-	// 处理预加载关系
-	if preload := ctx.Query("preload"); preload != "" {
-		opts.Preload = strings.Split(preload, ",")
-	}
-
-	// 处理字段选择
-	if fields := ctx.Query("fields"); fields != "" {
-		opts.Select = strings.Split(fields, ",")
-	}
-
-	return opts
-}
-
-// buildFilterOptions 构建过滤选项
-func (c *CrudController[T]) buildFilterOptions(ctx *gin.Context, opts *options.QueryOptions) {
-	querys := ctx.Request.URL.Query()
-	for key, values := range querys {
-		// 跳过特殊参数
-		if isSpecialParam(key) {
-			continue
-		}
-
-		// 处理范围查询
-		if strings.HasSuffix(key, "_gt") || strings.HasSuffix(key, "_lt") ||
-			strings.HasSuffix(key, "_gte") || strings.HasSuffix(key, "_lte") {
-			field := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(
-				strings.TrimSuffix(key, "_gt"), "_lt"), "_gte"), "_lte")
-
-			if strings.HasSuffix(key, "_gt") {
-				opts.Where[field+" > ?"] = values[0]
-			} else if strings.HasSuffix(key, "_lt") {
-				opts.Where[field+" < ?"] = values[0]
-			} else if strings.HasSuffix(key, "_gte") {
-				opts.Where[field+" >= ?"] = values[0]
-			} else if strings.HasSuffix(key, "_lte") {
-				opts.Where[field+" <= ?"] = values[0]
-			}
-			continue
-		}
-
-		// 处理IN查询
-		if strings.HasSuffix(key, "_in") {
-			field := strings.TrimSuffix(key, "_in")
-			opts.Where[field+" IN ?"] = strings.Split(values[0], ",")
-			continue
-		}
-
-		// 处理NULL查询
-		if strings.HasSuffix(key, "_null") {
-			field := strings.TrimSuffix(key, "_null")
-			if values[0] == "true" {
-				opts.Where[field+" IS NULL"] = nil
-			} else {
-				opts.Where[field+" IS NOT NULL"] = nil
-			}
-			continue
-		}
-
-		// 处理模糊查询
-		if strings.HasSuffix(key, "_like") {
-			field := strings.TrimSuffix(key, "_like")
-			opts.Where[field+" LIKE ?"] = "%" + values[0] + "%"
-			continue
-		}
-
-		// 处理普通相等查询
-		if !isSpecialParam(key) {
-			opts.Filter[key] = values[0]
-		}
-	}
-}
-
-// isSpecialParam 检查是否为特殊参数
-func isSpecialParam(key string) bool {
-	specialParams := []string{
-		"page", "page_size", "order_by",
-		"search", "search_fields", "preload",
-		"fields",
-	}
-	for _, param := range specialParams {
-		if key == param {
-			return true
-		}
-	}
-	return false
-}
-
-// buildDeleteOptions 构建删除选项
-func (c *CrudController[T]) buildDeleteOptions() []options.DeleteOptions {
-	return []options.DeleteOptions{{Force: !c.Config.SoftDelete}}
-}
-
 // List 获取实体列表
 func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
+	// 构建查询选项
 	opts := c.buildQueryOptions(ctx)
 
 	// 执行查询
@@ -272,7 +152,7 @@ func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return c.Config.Responser.List(items, total), nil
+	return c.Config.Responser.Pagenation(items, total, opts.Page, opts.PageSize), nil
 }
 
 // Update 更新实体
@@ -318,12 +198,34 @@ func (c *CrudController[T]) Delete(ctx *gin.Context) (interface{}, error) {
 		return nil, errors.New(errors.ErrNotFound, "invalid id format")
 	}
 
-	opts := c.buildDeleteOptions()
-	if err := c.Repository.DeleteById(ctx, uint(idInt), opts...); err != nil {
+	opts := options.NewDeleteOptions(
+		options.WithForce(!c.Config.SoftDelete),
+	)
+	if err := c.Repository.DeleteById(ctx, uint(idInt), opts); err != nil {
 		return nil, err
 	}
 
 	return c.Config.Responser.Success(nil), nil
+}
+
+// buildQueryOptions 构建查询选项
+func (c *CrudController[T]) buildQueryOptions(ctx *gin.Context) *options.QueryOptions {
+	// 获取基础分页参数
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", strconv.Itoa(c.Config.DefaultPageSize)))
+
+	// 限制页面大小
+	if pageSize > c.Config.MaxPageSize {
+		pageSize = c.Config.MaxPageSize
+	}
+
+	// 构建查询选项
+	opts := options.NewQueryOptions(
+		options.WithPage(page),
+		options.WithPageSize(pageSize),
+		options.WithOrderBy(ctx.DefaultQuery("order_by", "id desc")),
+	)
+	return opts
 }
 
 // UseMiddleware 添加中间件
@@ -539,43 +441,43 @@ func (c *CrudController[T]) queryParams() []types.Parameter {
 			types.Parameter{
 				Name:        field + "_gt",
 				In:          "query",
-				Description: fmt.Sprintf("Greater than filter for %s", field),
+				Description: fmt.Sprintf("Greater than filter for %s, example: %s_gt=10", field, field),
 				Schema:      types.Schema{Type: "string"},
 			},
 			types.Parameter{
 				Name:        field + "_lt",
 				In:          "query",
-				Description: fmt.Sprintf("Less than filter for %s", field),
+				Description: fmt.Sprintf("Less than filter for %s, example: %s_lt=10", field, field),
 				Schema:      types.Schema{Type: "string"},
 			},
 			types.Parameter{
 				Name:        field + "_gte",
 				In:          "query",
-				Description: fmt.Sprintf("Greater than or equal filter for %s", field),
+				Description: fmt.Sprintf("Greater than or equal filter for %s, example: %s_gte=10", field, field),
 				Schema:      types.Schema{Type: "string"},
 			},
 			types.Parameter{
 				Name:        field + "_lte",
 				In:          "query",
-				Description: fmt.Sprintf("Less than or equal filter for %s", field),
+				Description: fmt.Sprintf("Less than or equal filter for %s, example: %s_lte=10", field, field),
 				Schema:      types.Schema{Type: "string"},
 			},
 			types.Parameter{
 				Name:        field + "_in",
 				In:          "query",
-				Description: fmt.Sprintf("IN filter for %s (comma-separated values)", field),
+				Description: fmt.Sprintf("IN filter for %s (comma-separated values), example: %s_in=1,2,3", field, field),
 				Schema:      types.Schema{Type: "string"},
 			},
 			types.Parameter{
 				Name:        field + "_like",
 				In:          "query",
-				Description: fmt.Sprintf("LIKE filter for %s", field),
+				Description: fmt.Sprintf("LIKE filter for %s, example: %s_like=test", field, field),
 				Schema:      types.Schema{Type: "string"},
 			},
 			types.Parameter{
 				Name:        field + "_null",
 				In:          "query",
-				Description: fmt.Sprintf("NULL filter for %s (true|false)", field),
+				Description: fmt.Sprintf("NULL filter for %s (true|false), example: %s_null=true", field, field),
 				Schema:      types.Schema{Type: "string"},
 			},
 		)
