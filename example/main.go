@@ -87,7 +87,7 @@ func main() {
 	srv.PublishVersion(server.V2)
 
 	// 创建控制器工厂
-	factory := crud.NewControllerFactory(db.DB())
+	factory := crud.NewControllerFactory(db.DB(), cfg)
 
 	// 注册用户控制器
 	crud.RegisterCustomController[*models.User](factory, "/users", srv, controllers.NewUserController)

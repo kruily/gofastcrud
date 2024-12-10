@@ -4,17 +4,22 @@ import (
 	"reflect"
 
 	"github.com/kruily/gofastcrud/core/crud/types"
+	"github.com/kruily/gofastcrud/pkg/config"
 	"gorm.io/gorm"
 )
 
 // ControllerFactory 控制器工厂
 type ControllerFactory struct {
-	db *gorm.DB
+	db     *gorm.DB
+	config *config.Config
 }
 
 // NewControllerFactory 创建控制器工厂
-func NewControllerFactory(db *gorm.DB) *ControllerFactory {
-	return &ControllerFactory{db: db}
+func NewControllerFactory(db *gorm.DB, cfg *config.Config) *ControllerFactory {
+	SetConfig(CrudConfig{
+		Config: cfg,
+	})
+	return &ControllerFactory{db: db, config: cfg}
 }
 
 // Register 注册实体并创建控制器

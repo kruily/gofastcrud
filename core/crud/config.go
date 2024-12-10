@@ -1,6 +1,9 @@
 package crud
 
-import "github.com/kruily/gofastcrud/pkg/utils"
+import (
+	"github.com/kruily/gofastcrud/pkg/config"
+	"github.com/kruily/gofastcrud/pkg/utils"
+)
 
 // ICrudResponse 定义响应处理器接口
 type ICrudResponse interface {
@@ -11,6 +14,7 @@ type ICrudResponse interface {
 
 // CrudConfig 通用CRUD配置
 type CrudConfig struct {
+	*config.Config
 	// 响应处理器
 	Responser ICrudResponse
 	// 是否启用软删除
@@ -41,6 +45,9 @@ func SetConfig(config CrudConfig) {
 	}
 	if config.MaxPageSize > 0 {
 		globalConfig.MaxPageSize = config.MaxPageSize
+	}
+	if config.Config != nil {
+		globalConfig.Config = config.Config
 	}
 	globalConfig.SoftDelete = config.SoftDelete
 }

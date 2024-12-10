@@ -24,8 +24,8 @@ type Claims struct {
 
 // NewJWTMaker 创建一个新的JWT maker
 func NewJWTMaker(secretKey string) (*JWTMaker, error) {
-	if len(secretKey) < 32 {
-		return nil, errors.New("secret key must be at least 32 characters")
+	if len(secretKey) > 32 {
+		return nil, errors.New("secret key must be less than 32 characters")
 	}
 	return &JWTMaker{secretKey: secretKey}, nil
 }
