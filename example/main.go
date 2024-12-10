@@ -4,12 +4,12 @@ import (
 	"log"
 	"os"
 
+	"github.com/kruily/GoFastCrud/core/crud"
+	"github.com/kruily/GoFastCrud/core/database"
+	"github.com/kruily/GoFastCrud/core/server"
 	"github.com/kruily/GoFastCrud/example/controllers"
 	"github.com/kruily/GoFastCrud/example/models"
-	"github.com/kruily/GoFastCrud/internal/config"
-	"github.com/kruily/GoFastCrud/internal/crud"
-	"github.com/kruily/GoFastCrud/internal/database"
-	"github.com/kruily/GoFastCrud/internal/server"
+	"github.com/kruily/GoFastCrud/pkg/config"
 	"github.com/kruily/GoFastCrud/pkg/utils"
 )
 

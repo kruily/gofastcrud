@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kruily/GoFastCrud/internal/crud/options"
-	"github.com/kruily/GoFastCrud/internal/crud/types"
+	"github.com/kruily/GoFastCrud/core/crud/options"
+	"github.com/kruily/GoFastCrud/core/crud/types"
 	"github.com/kruily/GoFastCrud/pkg/errors"
 	"github.com/kruily/GoFastCrud/pkg/validator"
 	"gorm.io/gorm"

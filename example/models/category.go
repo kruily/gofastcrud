@@ -1,6 +1,6 @@
 package models
 
-import "github.com/kruily/GoFastCrud/internal/crud"
+import "github.com/kruily/GoFastCrud/core/crud"
 
 // Category 分类模型
 type Category struct {

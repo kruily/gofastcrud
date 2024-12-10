@@ -1,6 +1,6 @@
 package models
 
-import "github.com/kruily/GoFastCrud/internal/crud"
+import "github.com/kruily/GoFastCrud/core/crud"
 
 // User 用户模型
 // @Description 用户信息

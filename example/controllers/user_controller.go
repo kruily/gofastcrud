@@ -7,9 +7,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 
+	"github.com/kruily/GoFastCrud/core/crud"
+	"github.com/kruily/GoFastCrud/core/crud/types"
 	"github.com/kruily/GoFastCrud/example/models"
-	"github.com/kruily/GoFastCrud/internal/crud"
-	"github.com/kruily/GoFastCrud/internal/crud/types"
 )
 
 var validate = validator.New()
