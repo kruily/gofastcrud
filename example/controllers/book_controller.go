@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"github.com/kruily/GoFastCrud/core/crud"
-	"github.com/kruily/GoFastCrud/example/models"
+	"github.com/kruily/gofastcrud/core/crud"
+	"github.com/kruily/gofastcrud/example/models"
 	"gorm.io/gorm"
 )
 

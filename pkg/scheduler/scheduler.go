@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kruily/GoFastCrud/pkg/logger"
+	"github.com/kruily/gofastcrud/pkg/logger"
 	"github.com/robfig/cron/v3"
 )
 

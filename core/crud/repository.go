@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/kruily/GoFastCrud/core/crud/options"
+	"github.com/kruily/gofastcrud/core/crud/options"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

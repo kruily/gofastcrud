@@ -1,6 +1,6 @@
 package models
 
-import "github.com/kruily/GoFastCrud/core/crud"
+import "github.com/kruily/gofastcrud/core/crud"
 
 // Book 书籍模型
 type Book struct {

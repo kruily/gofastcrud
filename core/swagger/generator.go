@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/go-openapi/spec"
-	"github.com/kruily/GoFastCrud/core/crud"
-	"github.com/kruily/GoFastCrud/core/crud/types"
+	"github.com/kruily/gofastcrud/core/crud"
+	"github.com/kruily/gofastcrud/core/crud/types"
 )
 
 // Generator Swagger 文档生成器

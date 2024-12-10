@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kruily/GoFastCrud/pkg/errors"
+	"github.com/kruily/gofastcrud/pkg/errors"
 	"golang.org/x/time/rate"
 )
 

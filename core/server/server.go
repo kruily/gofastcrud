@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kruily/GoFastCrud/core/swagger" // swagger files
-	"github.com/kruily/GoFastCrud/core/templates"
-	"github.com/kruily/GoFastCrud/pkg/config"
-	"github.com/kruily/GoFastCrud/pkg/logger"
+	"github.com/kruily/gofastcrud/core/swagger" // swagger files
+	"github.com/kruily/gofastcrud/core/templates"
+	"github.com/kruily/gofastcrud/pkg/config"
+	"github.com/kruily/gofastcrud/pkg/logger"
 )
 
 type Server struct {

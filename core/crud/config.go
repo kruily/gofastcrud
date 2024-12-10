@@ -1,6 +1,6 @@
 package crud
 
-import "github.com/kruily/GoFastCrud/pkg/utils"
+import "github.com/kruily/gofastcrud/pkg/utils"
 
 // ICrudResponse 定义响应处理器接口
 type ICrudResponse interface {

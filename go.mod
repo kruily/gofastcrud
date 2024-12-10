@@ -1,4 +1,4 @@
-module github.com/kruily/GoFastCrud
+module github.com/kruily/gofastcrud
 
 go 1.23.4
 

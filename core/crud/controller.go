@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kruily/GoFastCrud/core/crud/options"
-	"github.com/kruily/GoFastCrud/core/crud/types"
-	"github.com/kruily/GoFastCrud/pkg/errors"
-	"github.com/kruily/GoFastCrud/pkg/validator"
+	"github.com/kruily/gofastcrud/core/crud/options"
+	"github.com/kruily/gofastcrud/core/crud/types"
+	"github.com/kruily/gofastcrud/pkg/errors"
+	"github.com/kruily/gofastcrud/pkg/validator"
 	"gorm.io/gorm"
 )
 

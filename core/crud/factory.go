@@ -3,7 +3,7 @@ package crud
 import (
 	"reflect"
 
-	"github.com/kruily/GoFastCrud/core/crud/types"
+	"github.com/kruily/gofastcrud/core/crud/types"
 	"gorm.io/gorm"
 )
 

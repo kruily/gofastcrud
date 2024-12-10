@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/spec"
-	"github.com/kruily/GoFastCrud/core/templates"
+	"github.com/kruily/gofastcrud/core/templates"
 )
 
 type VersionInfo struct {

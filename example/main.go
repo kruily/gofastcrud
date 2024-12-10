@@ -4,13 +4,13 @@ import (
 	"log"
 	"os"
 
-	"github.com/kruily/GoFastCrud/core/crud"
-	"github.com/kruily/GoFastCrud/core/database"
-	"github.com/kruily/GoFastCrud/core/server"
-	"github.com/kruily/GoFastCrud/example/controllers"
-	"github.com/kruily/GoFastCrud/example/models"
-	"github.com/kruily/GoFastCrud/pkg/config"
-	"github.com/kruily/GoFastCrud/pkg/utils"
+	"github.com/kruily/gofastcrud/core/crud"
+	"github.com/kruily/gofastcrud/core/database"
+	"github.com/kruily/gofastcrud/core/server"
+	"github.com/kruily/gofastcrud/example/controllers"
+	"github.com/kruily/gofastcrud/example/models"
+	"github.com/kruily/gofastcrud/pkg/config"
+	"github.com/kruily/gofastcrud/pkg/utils"
 )
 
 // @title Fast CRUD API
