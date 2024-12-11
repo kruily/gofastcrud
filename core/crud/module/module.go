@@ -8,8 +8,7 @@ import (
 	"github.com/kruily/gofastcrud/pkg/utils"
 )
 
-type IModule interface {
-}
+type IModule interface{}
 
 const (
 	ConfigService   = "Config"
@@ -52,9 +51,7 @@ func (m *CrudModule) GetService(name string) IModule {
 
 // SetService 设置服务
 func (m *CrudModule) SetService(name string, service IModule) {
-	if _, ok := m.services[name]; ok {
-		panic("service already exists")
-	}
+	delete(m.services, name)
 	m.services[name] = service
 }
 

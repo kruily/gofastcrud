@@ -37,6 +37,7 @@ type ICrudController[T ICrudEntity] interface {
 type CrudController[T ICrudEntity] struct {
 	Repository  IRepository[T]
 	Responser   module.ICrudResponse
+	Cache       module.ICache
 	entity      T
 	entityName  string // 添加实体名称字段
 	middlewares map[string][]gin.HandlerFunc
@@ -241,6 +242,11 @@ func (c *CrudController[T]) GetMiddlewares() map[string][]gin.HandlerFunc {
 // WrapHandler 包装处理函数（公开方法）
 func (c *CrudController[T]) WrapHandler(handler types.HandlerFunc) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		// 检查请求的APiRoute是否开启缓存
+		route := c.GetRoute(ctx)
+		if route != nil && route.Cache {
+			// 开启缓存
+		}
 		result, err := handler(ctx)
 		if err != nil {
 			var appErr *errors.AppError
@@ -292,6 +298,44 @@ func (c *CrudController[T]) RegisterRoutes(group *gin.RouterGroup) {
 			group.OPTIONS(route.Path, handlers...)
 		}
 	}
+}
+
+// GetRoute 根据请求获取APIRoute
+func (c *CrudController[T]) GetRoute(ctx *gin.Context) *types.APIRoute {
+	// 获取当前请求的方法和路径
+	method := ctx.Request.Method
+	path := ctx.Request.URL.Path
+
+	// 获取基础路径和请求路径
+	basePath := ctx.FullPath() // 例如: /api/v1/users/:id
+	requestPath := path        // 例如: /api/v1/users/123
+
+	for _, route := range c.routes {
+		// 方法必须匹配
+		if route.Method != method {
+			continue
+		}
+
+		// 处理不同类型的路由匹配
+		switch {
+		case route.Path == "": // 空路径匹配根路由，如 /api/v1/users
+			if basePath == requestPath {
+				return &route
+			}
+		case route.Path == "/:id": // ID路由匹配，如 /api/v1/users/123
+			if len(ctx.Params) > 0 && ctx.Param("id") != "" {
+				return &route
+			}
+		default: // 其他自定义路由
+			// 构建完整的路由路径进行比较
+			fullRoutePath := basePath[:strings.LastIndex(basePath, "/")] + route.Path
+			if fullRoutePath == requestPath {
+				return &route
+			}
+		}
+	}
+
+	return nil
 }
 
 // GetRoutes 获取所有路由
