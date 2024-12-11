@@ -31,6 +31,10 @@ type ICrudController[T ICrudEntity] interface {
 
 	// 路由注册
 	RegisterRoutes(group *gin.RouterGroup)
+	// GetEntity 获取实体
+	GetEntity() ICrudEntity
+	// GetEntityName 获取实体名称
+	GetEntityName() string
 }
 
 // CrudController 控制器实现
@@ -544,4 +548,9 @@ func (c *CrudController[T]) queryParams() []types.Parameter {
 // GetEntityName 获取实体名称
 func (c *CrudController[T]) GetEntityName() string {
 	return c.entityName
+}
+
+// GetEntity 获取实体
+func (c *CrudController[T]) GetEntity() ICrudEntity {
+	return c.entity
 }

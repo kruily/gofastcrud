@@ -10,7 +10,7 @@ type BookController struct {
 	*crud.CrudController[models.Book]
 }
 
-func NewBookController(db *gorm.DB) *BookController {
+func NewBookController(db *gorm.DB) crud.ICrudController[crud.ICrudEntity] {
 	controller := &BookController{
 		CrudController: crud.NewCrudController(db, models.Book{}),
 	}

@@ -84,17 +84,8 @@ func main() {
 
 	// 创建控制器工厂
 	factory := crud.NewControllerFactory(db.DB())
-
-	// 注册用户控制器
-	crud.RegisterCustomController(factory, "/users", srv, controllers.NewUserController)
-
-	// 注册书籍控制器
-	crud.Register[*models.Book](factory, "/books", srv)
-	// 注册分类控制器
-	crud.Register[*models.Category](factory, "/categories", srv)
-	// 为控制器添加中间件
-	// crud.Register[*models.Book](factory, "/books", srv).
-	// 	UseMiddleware("*", gin.Logger())
+	factory.RegisterBatchCustom(srv, controllers.NewUserController, controllers.NewBookController)
+	factory.RegisterBatch(srv, &models.Category{})
 
 	// 运行服务（包含优雅启停）
 	if err := srv.Run(); err != nil {

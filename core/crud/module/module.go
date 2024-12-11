@@ -20,6 +20,7 @@ const (
 	JwtService      = "Jwt"
 	CasbinService   = "Casbin"
 	EventBusService = "EventBus"
+	FactoryService  = "Factory"
 )
 
 // CRUD_MODULE CRUD模组 全局变量
