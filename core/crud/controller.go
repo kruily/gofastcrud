@@ -59,12 +59,18 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 		entityName:  entityName, // 保存实体名称
 		middlewares: make(map[string][]gin.HandlerFunc),
 	}
-	c.routes = append(c.routes, c.standardRoutes()...)
+	c.routes = append(c.routes, c.standardRoutes(false, 0)...)
 
 	// 自动配置预加载
 	c.configurePreloads()
 
 	return c
+}
+
+// EnableCache 启用缓存
+func (c *CrudController[T]) EnableCache(cache bool, cacheTTL int) {
+	c.routes = []types.APIRoute{}
+	c.routes = append(c.routes, c.standardRoutes(cache, cacheTTL)...)
 }
 
 // configurePreloads 配置预加载
@@ -244,7 +250,7 @@ func (c *CrudController[T]) WrapHandler(handler types.HandlerFunc) gin.HandlerFu
 	return func(ctx *gin.Context) {
 		// 检查请求的APiRoute是否开启缓存
 		route := c.GetRoute(ctx)
-		if route != nil && route.Cache {
+		if route != nil && route.Cache.Enable {
 			// 开启缓存
 		}
 		result, err := handler(ctx)
@@ -344,7 +350,7 @@ func (c *CrudController[T]) GetRoutes() []types.APIRoute {
 }
 
 // standardRoutes 标准路由
-func (c *CrudController[T]) standardRoutes() []types.APIRoute {
+func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.APIRoute {
 
 	return []types.APIRoute{
 		{
@@ -355,6 +361,7 @@ func (c *CrudController[T]) standardRoutes() []types.APIRoute {
 			Description: fmt.Sprintf("Get a single %s by its ID", c.entityName),
 			Handler:     c.GetById,
 			Response:    c.entity,
+			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "getById"), TTL: cacheTTL},
 		},
 		{
 			Path:        "",
@@ -365,6 +372,7 @@ func (c *CrudController[T]) standardRoutes() []types.APIRoute {
 			Handler:     c.List,
 			Response:    []T{},
 			Parameters:  c.queryParams(),
+			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "list"), TTL: cacheTTL},
 		},
 		{
 			Path:        "",
@@ -375,6 +383,7 @@ func (c *CrudController[T]) standardRoutes() []types.APIRoute {
 			Handler:     c.Create,
 			Request:     c.entity,
 			Response:    c.entity,
+			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "create"), TTL: cacheTTL},
 		},
 		{
 			Path:        "/:id",
@@ -385,6 +394,7 @@ func (c *CrudController[T]) standardRoutes() []types.APIRoute {
 			Handler:     c.Update,
 			Request:     c.entity,
 			Response:    c.entity,
+			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "update"), TTL: cacheTTL},
 		},
 		{
 			Path:        "/:id",
@@ -393,6 +403,7 @@ func (c *CrudController[T]) standardRoutes() []types.APIRoute {
 			Summary:     fmt.Sprintf("Delete %s", c.entityName),
 			Description: fmt.Sprintf("Delete an existing %s", c.entityName),
 			Handler:     c.Delete,
+			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "delete"), TTL: cacheTTL},
 		},
 	}
 }

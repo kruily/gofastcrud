@@ -1,6 +1,8 @@
 package types
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+)
 
 // HandlerFunc 统一的处理函数类型
 type HandlerFunc func(ctx *gin.Context) (interface{}, error)
@@ -21,6 +23,14 @@ type Schema struct {
 	Default interface{} `doc:"default,omitempty"`
 }
 
+// Cache 缓存配置
+type Cache struct {
+	Enable bool   `doc:"enable"` // 是否开启缓存
+	Key    string `doc:"key"`    // 缓存键
+	TTL    int    `doc:"ttl"`    // 缓存过期时间（秒）
+	Force  bool   `doc:"force"`  // 是否强制更新缓存
+}
+
 // APIRoute API 路由注解
 type APIRoute struct {
 	Path        string            `doc:"path"`        // 路径
@@ -33,5 +43,5 @@ type APIRoute struct {
 	Response    interface{}       `doc:"response"`    // 响应结构体
 	Handler     HandlerFunc       `doc:"handler"`     // 处理函数
 	Middlewares []gin.HandlerFunc `doc:"middlewares"` // 中间件
-	Cache       bool              `doc:"cache"`       // 是否开启缓存
+	Cache       Cache             `doc:"cache"`       // 缓存配置
 }
