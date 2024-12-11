@@ -217,7 +217,7 @@ controller.UseMiddleware("POST", middleware.Validate())
 
 ### 自定义响应处理
 ```go
-crud.SetConfig(&crud.CrudConfig{
+crud.SetConfig(&crud.CrudModule{
     Responser: &CustomResponser{},
 })
 ```
@@ -234,7 +234,7 @@ type ICrudResponse interface {
 ### 分页配置
 
 ```go
-crud.SetConfig(&crud.CrudConfig{
+crud.SetConfig(&crud.CrudModule{
     DefaultPageSize: 10,
     MaxPageSize:     100,
 })

@@ -22,12 +22,12 @@ type CreateRequest struct {
 }
 
 type UserController struct {
-	*crud.CrudController[models.User]
+	*crud.CrudController[*models.User]
 }
 
-func NewUserController(db *gorm.DB) *UserController {
+func NewUserController(db *gorm.DB) crud.ICrudController[*models.User] {
 	controller := &UserController{
-		CrudController: crud.NewCrudController(db, models.User{}),
+		CrudController: crud.NewCrudController(db, &models.User{}),
 	}
 	controller.AddRoute(types.APIRoute{
 		Method:  http.MethodPost,

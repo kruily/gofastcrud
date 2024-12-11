@@ -7,7 +7,7 @@ import "github.com/kruily/gofastcrud/core/crud"
 type User struct {
 	*crud.BaseEntity
 	Username string `json:"username" binding:"required"`
-	Email    string `json:"email"`
+	Email    string `json:"email" binding:"required" gorm:"unique;"`
 }
 
 func (User) Table() string {

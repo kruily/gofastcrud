@@ -23,6 +23,10 @@ database:
   conn_max_lifetime: 3600
   charset: "utf8mb4"
 
+pagenation:
+  default_page_size: 10
+  max_page_size: 100
+
 log:
   level: "debug"
   filename: "logs/app1.log"

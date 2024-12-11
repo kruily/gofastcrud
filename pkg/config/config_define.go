@@ -2,12 +2,13 @@ package config
 
 // Config 配置结构
 type Config struct {
-	App      AppConfig      `mapstructure:"app"`
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Log      LogConfig      `mapstructure:"log"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
+	App        AppConfig        `mapstructure:"app"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Database   DatabaseConfig   `mapstructure:"database"`
+	Log        LogConfig        `mapstructure:"log"`
+	Redis      RedisConfig      `mapstructure:"redis"`
+	JWT        JWTConfig        `mapstructure:"jwt"`
+	Pagenation PagenationConfig `mapstructure:"pagenation"`
 }
 
 type AppConfig struct {
@@ -59,4 +60,9 @@ type JWTConfig struct {
 	SecretKey   string `mapstructure:"secret_key"`
 	ExpireHours int    `mapstructure:"expire_hours"`
 	Issuer      string `mapstructure:"issuer"`
+}
+
+type PagenationConfig struct {
+	DefaultPageSize int `mapstructure:"default_page_size"`
+	MaxPageSize     int `mapstructure:"max_page_size"`
 }

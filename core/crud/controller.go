@@ -7,8 +7,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kruily/gofastcrud/core/crud/module"
 	"github.com/kruily/gofastcrud/core/crud/options"
 	"github.com/kruily/gofastcrud/core/crud/types"
+	"github.com/kruily/gofastcrud/pkg/config"
 	"github.com/kruily/gofastcrud/pkg/errors"
 	"github.com/kruily/gofastcrud/pkg/validator"
 	"gorm.io/gorm"
@@ -34,7 +36,7 @@ type ICrudController[T ICrudEntity] interface {
 // CrudController 控制器实现
 type CrudController[T ICrudEntity] struct {
 	Repository  IRepository[T]
-	Config      *CrudConfig
+	Responser   module.ICrudResponse
 	entity      T
 	entityName  string // 添加实体名称字段
 	middlewares map[string][]gin.HandlerFunc
@@ -51,7 +53,7 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 
 	c := &CrudController[T]{
 		Repository:  NewRepository(db, entity),
-		Config:      GetConfig(),
+		Responser:   module.GetCrudModule().GetService(module.ResponseService).(module.ICrudResponse),
 		entity:      entity,
 		entityName:  entityName, // 保存实体名称
 		middlewares: make(map[string][]gin.HandlerFunc),
@@ -108,7 +110,7 @@ func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return c.Config.Responser.Success(entity), nil
+	return c.Responser.Success(entity), nil
 }
 
 // GetById 根据ID获取实体
@@ -132,7 +134,7 @@ func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
 		return nil, errors.New(errors.ErrNotFound, "record not found")
 	}
 
-	return c.Config.Responser.Success(entity), nil
+	return c.Responser.Success(entity), nil
 }
 
 // List 获取实体列表
@@ -152,7 +154,7 @@ func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return c.Config.Responser.Pagenation(items, total, opts.Page, opts.PageSize), nil
+	return c.Responser.Pagenation(items, total, opts.Page, opts.PageSize), nil
 }
 
 // Update 更新实体
@@ -183,7 +185,7 @@ func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return c.Config.Responser.Success(entity), nil
+	return c.Responser.Success(entity), nil
 }
 
 // Delete 删除实体
@@ -198,25 +200,23 @@ func (c *CrudController[T]) Delete(ctx *gin.Context) (interface{}, error) {
 		return nil, errors.New(errors.ErrNotFound, "invalid id format")
 	}
 
-	opts := options.NewDeleteOptions(
-		options.WithForce(!c.Config.SoftDelete),
-	)
+	opts := options.NewDeleteOptions()
 	if err := c.Repository.DeleteById(ctx, uint(idInt), opts); err != nil {
 		return nil, err
 	}
 
-	return c.Config.Responser.Success(nil), nil
+	return c.Responser.Success(nil), nil
 }
 
 // buildQueryOptions 构建查询选项
 func (c *CrudController[T]) buildQueryOptions(ctx *gin.Context) *options.QueryOptions {
 	// 获取基础分页参数
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", strconv.Itoa(c.Config.DefaultPageSize)))
+	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", strconv.Itoa(config.CONFIG_MANAGER.GetConfig().Pagenation.DefaultPageSize)))
 
 	// 限制页面大小
-	if pageSize > c.Config.MaxPageSize {
-		pageSize = c.Config.MaxPageSize
+	if pageSize > config.CONFIG_MANAGER.GetConfig().Pagenation.MaxPageSize {
+		pageSize = config.CONFIG_MANAGER.GetConfig().Pagenation.MaxPageSize
 	}
 
 	// 构建查询选项
@@ -250,7 +250,7 @@ func (c *CrudController[T]) WrapHandler(handler types.HandlerFunc) gin.HandlerFu
 			default:
 				appErr = errors.Wrap(err, errors.ErrInternal, "内部服务器错误")
 			}
-			ctx.JSON(appErr.HTTPStatus(), c.Config.Responser.Error(appErr))
+			ctx.JSON(appErr.HTTPStatus(), c.Responser.Error(appErr))
 			return
 		}
 		ctx.JSON(200, result)

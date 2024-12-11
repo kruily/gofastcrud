@@ -5,11 +5,13 @@ import (
 	"os"
 
 	"github.com/kruily/gofastcrud/core/crud"
+	"github.com/kruily/gofastcrud/core/crud/module"
 	"github.com/kruily/gofastcrud/core/database"
 	"github.com/kruily/gofastcrud/core/server"
 	"github.com/kruily/gofastcrud/example/controllers"
 	"github.com/kruily/gofastcrud/example/models"
 	"github.com/kruily/gofastcrud/pkg/config"
+	"github.com/kruily/gofastcrud/pkg/logger"
 	"github.com/kruily/gofastcrud/pkg/utils"
 )
 
@@ -28,25 +30,18 @@ func init() {
 }
 
 func main() {
-	// 创建配置管理器
-	configManager := config.NewConfigManager()
-
-	// 加载配置
-	configPath := os.Getenv("CONFIG_PATH")
-	if err := configManager.LoadConfig(configPath); err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
-
+	configManager := module.CRUD_MODULE.GetService(module.ConfigService).(*config.ConfigManager)
+	configManager.LoadConfig()
 	// 注册配置重载回调
 	configManager.OnReload(func() {
 		log.Println("Configuration reloaded")
 		// 这里可以添加重载后的处理逻辑
 	})
-
+	// 获取配置
 	cfg := configManager.GetConfig()
 
-	// 创建数据库管理器
-	db := database.New()
+	// 获取数据库模组
+	db := module.CRUD_MODULE.GetService(module.DatabaseService).(*database.Database)
 
 	// 注册模型
 	db.RegisterModels(
@@ -62,23 +57,24 @@ func main() {
 	}
 
 	// 创建日志实例
-	// logConfig := logger.Config{
-	// 	Level: logger.InfoLevel,
-	// 	FileConfig: &logger.FileConfig{
-	// 		Filename:   "logs/app.log",
-	// 		MaxSize:    100,
-	// 		MaxBackups: 3,
-	// 		MaxAge:     7,
-	// 		Compress:   true,
-	// 	},
-	// 	ConsoleLevel: logger.DebugLevel,
-	// }
+	logService, err := logger.NewLogger(logger.Config{
+		Level: logger.InfoLevel,
+		FileConfig: &logger.FileConfig{
+			Filename:   "logs/app.log",
+			MaxSize:    100,
+			MaxBackups: 3,
+			MaxAge:     7,
+			Compress:   true,
+		},
+		ConsoleLevel: logger.DebugLevel,
+	})
+	if err != nil {
+		log.Fatal("Failed to create logger: ", err)
+	}
+	defer logService.Close()
 
-	// log, err := logger.NewLogger(logConfig)
-	// if err != nil {
-	// 	log.Fatal("Failed to create logger: %v", map[string]interface{}{"error": err})
-	// }
-	// defer log.Close()
+	// 注册日志服务
+	module.CRUD_MODULE.WithLogger(logService)
 
 	// 创建服务实例
 	srv := server.NewServer(cfg)
@@ -87,10 +83,10 @@ func main() {
 	srv.PublishVersion(server.V2)
 
 	// 创建控制器工厂
-	factory := crud.NewControllerFactory(db.DB(), cfg)
+	factory := crud.NewControllerFactory(db.DB())
 
 	// 注册用户控制器
-	crud.RegisterCustomController[*models.User](factory, "/users", srv, controllers.NewUserController)
+	crud.RegisterCustomController(factory, "/users", srv, controllers.NewUserController)
 
 	// 注册书籍控制器
 	crud.Register[*models.Book](factory, "/books", srv)

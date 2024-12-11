@@ -4,22 +4,17 @@ import (
 	"reflect"
 
 	"github.com/kruily/gofastcrud/core/crud/types"
-	"github.com/kruily/gofastcrud/pkg/config"
 	"gorm.io/gorm"
 )
 
 // ControllerFactory 控制器工厂
 type ControllerFactory struct {
-	db     *gorm.DB
-	config *config.Config
+	db *gorm.DB
 }
 
 // NewControllerFactory 创建控制器工厂
-func NewControllerFactory(db *gorm.DB, cfg *config.Config) *ControllerFactory {
-	SetConfig(CrudConfig{
-		Config: cfg,
-	})
-	return &ControllerFactory{db: db, config: cfg}
+func NewControllerFactory(db *gorm.DB) *ControllerFactory {
+	return &ControllerFactory{db: db}
 }
 
 // Register 注册实体并创建控制器
@@ -58,18 +53,13 @@ func RegisterWithOptions[T ICrudEntity](
 // path 是路由路径
 // server 是注册服务器
 // controllerConstructor 是控制器构造函数
-func RegisterCustomController[T ICrudEntity, C CrudControllerInterface[T]](
+func RegisterCustomController[T ICrudEntity](
 	f *ControllerFactory,
 	path string,
 	server types.RegisterServer,
-	controllerConstructor func(*gorm.DB) C,
-) C {
+	controllerConstructor func(*gorm.DB) ICrudController[T],
+) ICrudController[T] {
 	controller := controllerConstructor(f.db)
 	server.RegisterCrudController(path, controller, reflect.TypeOf(*new(T)))
 	return controller
-}
-
-// CrudControllerInterface 控制器接口
-type CrudControllerInterface[T ICrudEntity] interface {
-	GetRoutes() []types.APIRoute
 }

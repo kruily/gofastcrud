@@ -2,11 +2,14 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
+
+var CONFIG_MANAGER *ConfigManager
 
 // ConfigManager 配置管理器
 type ConfigManager struct {
@@ -18,14 +21,22 @@ type ConfigManager struct {
 
 // NewConfigManager 创建配置管理器
 func NewConfigManager() *ConfigManager {
-	return &ConfigManager{
+	if CONFIG_MANAGER != nil {
+		return CONFIG_MANAGER
+	}
+	CONFIG_MANAGER = &ConfigManager{
 		v:        viper.New(),
 		onReload: make([]func(), 0),
 	}
+	return CONFIG_MANAGER
 }
 
 // LoadConfig 加载配置
-func (cm *ConfigManager) LoadConfig(configPath string) error {
+func (cm *ConfigManager) LoadConfig() error {
+
+	// 加载配置
+	configPath := os.Getenv("CONFIG_PATH")
+
 	if configPath != "" {
 		cm.v.SetConfigFile(configPath)
 	} else {
