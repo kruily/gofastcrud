@@ -11,6 +11,7 @@ import (
 type IModule interface{}
 
 const (
+	ServerService   = "Server"
 	ConfigService   = "Config"
 	DatabaseService = "Database"
 	ResponseService = "Response"
@@ -94,4 +95,9 @@ func (m *CrudModule) WithCasbin(service ICasbin) {
 // WithEventBus 设置EventBus服务
 func (m *CrudModule) WithEventBus(service IEventBus) {
 	m.SetService(EventBusService, service)
+}
+
+// WithServer 设置Server服务
+func (m *CrudModule) WithServer(service IServer) {
+	m.SetService(ServerService, service)
 }

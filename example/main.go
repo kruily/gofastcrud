@@ -78,6 +78,8 @@ func main() {
 
 	// 创建服务实例
 	srv := server.NewServer(cfg)
+	// 注册服务
+	module.CRUD_MODULE.WithServer(srv)
 	// 发布路由
 	srv.PublishVersion(server.V1)
 	srv.PublishVersion(server.V2)

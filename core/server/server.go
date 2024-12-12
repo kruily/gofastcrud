@@ -13,25 +13,21 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kruily/gofastcrud/core/crud/types"
 	"github.com/kruily/gofastcrud/core/swagger" // swagger files
 	"github.com/kruily/gofastcrud/core/templates"
 	"github.com/kruily/gofastcrud/pkg/config"
-	"github.com/kruily/gofastcrud/pkg/logger"
 )
 
 type Server struct {
 	config         *config.Config
 	router         *gin.Engine
 	srv            *http.Server
-	log            *logger.Logger
 	swaggerGen     *swagger.Generator
 	enableSwagger  bool
 	versionManager *VersionManager
-	apiGroups      map[APIVersion]*gin.RouterGroup
+	apiGroups      map[types.APIVersion]*gin.RouterGroup
 }
-
-// RouteRegister 路由注册函数类型
-type RouteRegister func(r *gin.RouterGroup)
 
 func NewServer(cfg *config.Config) *Server {
 	// 创建 Gin 引擎
@@ -53,28 +49,22 @@ func NewServer(cfg *config.Config) *Server {
 		swaggerGen:     swagger.NewGenerator(),
 		enableSwagger:  cfg.Server.EnableSwagger,
 		versionManager: NewVersionManager(),
-		apiGroups:      make(map[APIVersion]*gin.RouterGroup),
+		apiGroups:      make(map[types.APIVersion]*gin.RouterGroup),
 	}
 }
 
-// SetLogger 设置日志实例
-func (s *Server) SetLogger(log *logger.Logger) {
-	s.log = log
-}
-
 // Publish 设置 API 路径前缀
-func (s *Server) PublishVersion(version APIVersion) *Server {
+func (s *Server) PublishVersion(version types.APIVersion) {
 	if !s.versionManager.IsValidVersion(version) {
 		s.versionManager.RegisterVersion(version)
 	}
 	path := fmt.Sprintf("/api/%s", version)
 	group := s.router.Group(path)
 	s.apiGroups[version] = group
-	return s
 }
 
 // RegisterRoutes 注册路由
-func (s *Server) RegisterRoutes(register RouteRegister) {
+func (s *Server) RegisterRoutes(register types.RouteRegister) {
 	for _, group := range s.apiGroups {
 		register(group)
 	}
@@ -122,11 +112,6 @@ func (s *Server) Run() error {
 
 	log.Println("Server exiting")
 	return nil
-}
-
-// Router 获取路由实例
-func (s *Server) Router() *gin.Engine {
-	return s.router
 }
 
 // EnableSwagger 启用 Swagger 文档

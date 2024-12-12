@@ -3,26 +3,26 @@ package server
 import (
 	"fmt"
 	"strings"
+
+	"github.com/kruily/gofastcrud/core/crud/types"
 )
 
-type APIVersion string
-
 const (
-	V1 APIVersion = "v1"
-	V2 APIVersion = "v2"
+	V1 types.APIVersion = "v1"
+	V2 types.APIVersion = "v2"
 )
 
 // VersionManager 版本管理器
 type VersionManager struct {
-	versions       map[APIVersion]bool
-	defaultVersion APIVersion
+	versions       map[types.APIVersion]bool
+	defaultVersion types.APIVersion
 	versionParam   string // URL参数中的版本标识
 }
 
 // NewVersionManager 创建版本管理器
 func NewVersionManager() *VersionManager {
 	vm := &VersionManager{
-		versions:       make(map[APIVersion]bool),
+		versions:       make(map[types.APIVersion]bool),
 		defaultVersion: V1,
 		versionParam:   "version",
 	}
@@ -31,24 +31,24 @@ func NewVersionManager() *VersionManager {
 }
 
 // RegisterVersion 注册版本
-func (vm *VersionManager) RegisterVersion(version APIVersion) {
+func (vm *VersionManager) RegisterVersion(version types.APIVersion) {
 	vm.versions[version] = true
 }
 
 // SetDefaultVersion 设置默认版本
-func (vm *VersionManager) SetDefaultVersion(version APIVersion) {
+func (vm *VersionManager) SetDefaultVersion(version types.APIVersion) {
 	if vm.IsValidVersion(version) {
 		vm.defaultVersion = version
 	}
 }
 
 // IsValidVersion 判断版本是否有效
-func (vm *VersionManager) IsValidVersion(version APIVersion) bool {
+func (vm *VersionManager) IsValidVersion(version types.APIVersion) bool {
 	return vm.versions[version]
 }
 
 // GetVersionPath 获取带版本的路径
-func (vm *VersionManager) GetVersionPath(version APIVersion, path string) string {
+func (vm *VersionManager) GetVersionPath(version types.APIVersion, path string) string {
 	if !vm.IsValidVersion(version) {
 		version = vm.defaultVersion
 	}
@@ -56,12 +56,12 @@ func (vm *VersionManager) GetVersionPath(version APIVersion, path string) string
 }
 
 // ParseVersionFromPath 从路径中解析版本
-func (vm *VersionManager) ParseVersionFromPath(path string) APIVersion {
+func (vm *VersionManager) ParseVersionFromPath(path string) types.APIVersion {
 	parts := strings.Split(path, "/")
 	for i, part := range parts {
 		if part == "api" && i+1 < len(parts) {
-			if vm.IsValidVersion(APIVersion(parts[i+1])) {
-				return APIVersion(parts[i+1])
+			if vm.IsValidVersion(types.APIVersion(parts[i+1])) {
+				return types.APIVersion(parts[i+1])
 			}
 		}
 	}
@@ -69,8 +69,8 @@ func (vm *VersionManager) ParseVersionFromPath(path string) APIVersion {
 }
 
 // GetAvailableVersions 获取所有可用版本
-func (vm *VersionManager) GetAvailableVersions() []APIVersion {
-	versions := make([]APIVersion, 0, len(vm.versions))
+func (vm *VersionManager) GetAvailableVersions() []types.APIVersion {
+	versions := make([]types.APIVersion, 0, len(vm.versions))
 	for version := range vm.versions {
 		versions = append(versions, version)
 	}

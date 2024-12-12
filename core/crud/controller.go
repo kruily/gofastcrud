@@ -35,6 +35,8 @@ type ICrudController[T ICrudEntity] interface {
 	GetEntity() ICrudEntity
 	// GetEntityName 获取实体名称
 	GetEntityName() string
+	// EnableCache 启用缓存
+	EnableCache(cacheTTL int)
 }
 
 // CrudController 控制器实现
@@ -72,9 +74,9 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 }
 
 // EnableCache 启用缓存
-func (c *CrudController[T]) EnableCache(cache bool, cacheTTL int) {
+func (c *CrudController[T]) EnableCache(cacheTTL int) {
 	c.routes = []types.APIRoute{}
-	c.routes = append(c.routes, c.standardRoutes(cache, cacheTTL)...)
+	c.routes = append(c.routes, c.standardRoutes(true, cacheTTL)...)
 }
 
 // configurePreloads 配置预加载
