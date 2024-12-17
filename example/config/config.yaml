@@ -72,3 +72,15 @@ security:
     enabled: true
   sql_injection_protection:
     enabled: true
+
+plugins:
+  - name: logger
+    enabled: true
+    config:
+      level: debug
+  - name: cache
+    enabled: true
+    config:
+      type: redis
+      host: localhost
+      port: 6379
