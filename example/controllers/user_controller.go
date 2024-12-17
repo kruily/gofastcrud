@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"github.com/kruily/gofastcrud/core/crud"
@@ -22,12 +23,12 @@ type CreateRequest struct {
 }
 
 type UserController struct {
-	*crud.CrudController[models.User]
+	*crud.CrudController[models.User, uuid.UUID]
 }
 
-func NewUserController(db *gorm.DB) crud.ICrudController[crud.ICrudEntity] {
+func NewUserController(db *gorm.DB) crud.ICrudController[crud.ICrudEntity[uuid.UUID], uuid.UUID] {
 	controller := &UserController{
-		CrudController: crud.NewCrudController(db, models.User{}),
+		CrudController: crud.NewCrudController[models.User, uuid.UUID](db, models.User{}),
 	}
 	controller.AddRoute(types.APIRoute{
 		Method:  http.MethodPost,

@@ -11,21 +11,21 @@ import (
 )
 
 // Generator Swagger 文档生成器
-type Generator struct {
+type Generator[T crud.ID_TYPE] struct {
 	docs           map[string]*spec.Swagger
 	processedTypes map[reflect.Type]*spec.Schema
 }
 
 // NewGenerator 创建生成器实例
-func NewGenerator() *Generator {
-	return &Generator{
+func NewGenerator[T crud.ID_TYPE]() *Generator[T] {
+	return &Generator[T]{
 		docs:           make(map[string]*spec.Swagger),
 		processedTypes: make(map[reflect.Type]*spec.Schema),
 	}
 }
 
 // RegisterEntityWithVersion 注册带版本的实体文档
-func (g *Generator) RegisterEntityWithVersion(entityType reflect.Type, basePath string, routePath string, controller interface{}, version string) {
+func (g *Generator[T]) RegisterEntityWithVersion(entityType reflect.Type, basePath string, routePath string, controller interface{}, version string) {
 	// 处理指针类型
 	if entityType.Kind() == reflect.Ptr {
 		entityType = entityType.Elem()
@@ -36,7 +36,7 @@ func (g *Generator) RegisterEntityWithVersion(entityType reflect.Type, basePath 
 	// 获取所有路由
 	var allRoutes []types.APIRoute
 	switch c := controller.(type) {
-	case *crud.CrudController[crud.ICrudEntity]:
+	case *crud.CrudController[crud.ICrudEntity[T], T]:
 		allRoutes = c.GetRoutes()
 	case interface{ GetRoutes() []types.APIRoute }:
 		allRoutes = c.GetRoutes()
@@ -129,12 +129,12 @@ func (g *Generator) RegisterEntityWithVersion(entityType reflect.Type, basePath 
 }
 
 // GetSwagger 获取指定实体的 Swagger 文档
-func (g *Generator) GetSwagger(entityPath string) *spec.Swagger {
+func (g *Generator[T]) GetSwagger(entityPath string) *spec.Swagger {
 	return g.docs[entityPath]
 }
 
 // GetAllSwagger 获取合并后的完整 Swagger 文档
-func (g *Generator) GetAllSwagger() interface{} {
+func (g *Generator[T]) GetAllSwagger() interface{} {
 	versionDocs := make(map[string]*spec.Swagger)
 
 	// 遍历所有文档，按版本分组
@@ -198,7 +198,7 @@ func (g *Generator) GetAllSwagger() interface{} {
 }
 
 // generateSchema 生成实体的 Schema
-func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
+func (g *Generator[T]) generateSchema(t reflect.Type) *spec.Schema {
 	// 处理指针类型
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -285,7 +285,7 @@ func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 }
 
 // getFieldSchema 获取字段的 Schema
-func (g *Generator) getFieldSchema(field reflect.StructField) spec.Schema {
+func (g *Generator[T]) getFieldSchema(field reflect.StructField) spec.Schema {
 	schema := spec.Schema{
 		SchemaProps: spec.SchemaProps{},
 	}
@@ -342,7 +342,7 @@ func (g *Generator) getFieldSchema(field reflect.StructField) spec.Schema {
 }
 
 // generateOperation 生成操作文档
-func (g *Generator) generateOperation(route types.APIRoute, entityName string) *spec.Operation {
+func (g *Generator[T]) generateOperation(route types.APIRoute, entityName string) *spec.Operation {
 	// 生成 operationId
 	operationId := ""
 	if len(strings.Split(route.Path, "/")) > 1 {

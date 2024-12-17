@@ -13,23 +13,24 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kruily/gofastcrud/core/crud"
 	"github.com/kruily/gofastcrud/core/crud/types"
 	"github.com/kruily/gofastcrud/core/swagger" // swagger files
 	"github.com/kruily/gofastcrud/core/templates"
 	"github.com/kruily/gofastcrud/pkg/config"
 )
 
-type Server struct {
+type Server[T crud.ID_TYPE] struct {
 	config         *config.Config
 	router         *gin.Engine
 	srv            *http.Server
-	swaggerGen     *swagger.Generator
+	swaggerGen     *swagger.Generator[T]
 	enableSwagger  bool
 	versionManager *VersionManager
 	apiGroups      map[types.APIVersion]*gin.RouterGroup
 }
 
-func NewServer(cfg *config.Config) *Server {
+func NewServer[T crud.ID_TYPE](cfg *config.Config) *Server[T] {
 	// 创建 Gin 引擎
 	r := gin.Default()
 
@@ -42,11 +43,11 @@ func NewServer(cfg *config.Config) *Server {
 		Handler: r,
 	}
 
-	return &Server{
+	return &Server[T]{
 		config:         cfg,
 		router:         r,
 		srv:            srv,
-		swaggerGen:     swagger.NewGenerator(),
+		swaggerGen:     swagger.NewGenerator[T](),
 		enableSwagger:  cfg.Server.EnableSwagger,
 		versionManager: NewVersionManager(),
 		apiGroups:      make(map[types.APIVersion]*gin.RouterGroup),
@@ -54,7 +55,7 @@ func NewServer(cfg *config.Config) *Server {
 }
 
 // Publish 设置 API 路径前缀
-func (s *Server) PublishVersion(version types.APIVersion) {
+func (s *Server[T]) PublishVersion(version types.APIVersion) {
 	if !s.versionManager.IsValidVersion(version) {
 		s.versionManager.RegisterVersion(version)
 	}
@@ -64,14 +65,14 @@ func (s *Server) PublishVersion(version types.APIVersion) {
 }
 
 // RegisterRoutes 注册路由
-func (s *Server) RegisterRoutes(register types.RouteRegister) {
+func (s *Server[T]) RegisterRoutes(register types.RouteRegister) {
 	for _, group := range s.apiGroups {
 		register(group)
 	}
 }
 
 // Run 启动服务并处理优雅关闭
-func (s *Server) Run() error {
+func (s *Server[T]) Run() error {
 	// 启用 Swagger 文档
 	if s.enableSwagger {
 		s.EnableSwagger()
@@ -115,7 +116,7 @@ func (s *Server) Run() error {
 }
 
 // EnableSwagger 启用 Swagger 文档
-func (s *Server) EnableSwagger() {
+func (s *Server[T]) EnableSwagger() {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		currentVersion := s.versionManager.ParseVersionFromPath(r.URL.Path)
 		versions := s.versionManager.GetAvailableVersions()
@@ -138,7 +139,7 @@ func (s *Server) EnableSwagger() {
 }
 
 // RegisterCrudController 注册 CRUD 控制器并生成文档
-func (s *Server) RegisterCrudController(path string, controller interface{}, entityType reflect.Type) {
+func (s *Server[T]) RegisterCrudController(path string, controller interface{}, entityType reflect.Type) {
 	for version, group := range s.apiGroups {
 		routePath := strings.TrimPrefix(path, "/")
 		if c, ok := controller.(interface{ RegisterRoutes(*gin.RouterGroup) }); ok {

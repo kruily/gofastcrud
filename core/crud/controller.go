@@ -16,7 +16,7 @@ import (
 )
 
 // ICrudController 控制器接口
-type ICrudController[T ICrudEntity] interface {
+type ICrudController[T ICrudEntity[TID], TID ID_TYPE] interface {
 	// 基础 CRUD 操作
 	Create(ctx *gin.Context) (interface{}, error)
 	GetById(ctx *gin.Context) (interface{}, error)
@@ -31,7 +31,7 @@ type ICrudController[T ICrudEntity] interface {
 	// 路由注册
 	RegisterRoutes(group *gin.RouterGroup)
 	// GetEntity 获取实体
-	GetEntity() ICrudEntity
+	GetEntity() ICrudEntity[TID]
 	// GetEntityName 获取实体名称
 	GetEntityName() string
 	// EnableCache 启用缓存
@@ -44,8 +44,8 @@ type ICrudController[T ICrudEntity] interface {
 }
 
 // CrudController 控制器实现
-type CrudController[T ICrudEntity] struct {
-	Repository  IRepository[T]
+type CrudController[T ICrudEntity[TID], TID ID_TYPE] struct {
+	Repository  IRepository[T, TID]
 	Responser   module.ICrudResponse
 	Cache       module.ICache
 	entity      T
@@ -55,14 +55,14 @@ type CrudController[T ICrudEntity] struct {
 }
 
 // NewCrudController 创建控制器
-func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] {
+func NewCrudController[T ICrudEntity[TID], TID ID_TYPE](db *gorm.DB, entity T) *CrudController[T, TID] {
 	entityType := reflect.TypeOf(entity)
 	if entityType.Kind() == reflect.Ptr {
 		entityType = entityType.Elem()
 	}
 	entityName := entityType.Name()
 
-	c := &CrudController[T]{
+	c := &CrudController[T, TID]{
 		Repository:  NewRepository(db, entity),
 		Responser:   module.GetCrudModule().GetService(module.ResponseService).(module.ICrudResponse),
 		entity:      entity,
@@ -78,13 +78,13 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 }
 
 // EnableCache 启用缓存
-func (c *CrudController[T]) EnableCache(cacheTTL int) {
+func (c *CrudController[T, TID]) EnableCache(cacheTTL int) {
 	c.routes = []types.APIRoute{}
 	c.routes = append(c.routes, c.standardRoutes(true, cacheTTL)...)
 }
 
 // configurePreloads 配置预加载
-func (c *CrudController[T]) configurePreloads() {
+func (c *CrudController[T, TID]) configurePreloads() {
 	// 获取实体类型
 	entityType := reflect.TypeOf(c.entity)
 	if entityType.Kind() == reflect.Ptr {
@@ -111,7 +111,7 @@ func (c *CrudController[T]) configurePreloads() {
 }
 
 // buildQueryOptions 构建查询选项
-func (c *CrudController[T]) buildQueryOptions(ctx *gin.Context) *options.QueryOptions {
+func (c *CrudController[T, TID]) buildQueryOptions(ctx *gin.Context) *options.QueryOptions {
 	// 获取基础分页参数
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", strconv.Itoa(config.CONFIG_MANAGER.GetConfig().Pagenation.DefaultPageSize)))
@@ -131,17 +131,17 @@ func (c *CrudController[T]) buildQueryOptions(ctx *gin.Context) *options.QueryOp
 }
 
 // UseMiddleware 添加中间件
-func (c *CrudController[T]) UseMiddleware(method string, middlewares ...gin.HandlerFunc) {
+func (c *CrudController[T, TID]) UseMiddleware(method string, middlewares ...gin.HandlerFunc) {
 	c.middlewares[method] = append(c.middlewares[method], middlewares...)
 }
 
 // GetMiddlewares 获取中间件
-func (c *CrudController[T]) GetMiddlewares() map[string][]gin.HandlerFunc {
+func (c *CrudController[T, TID]) GetMiddlewares() map[string][]gin.HandlerFunc {
 	return c.middlewares
 }
 
 // WrapHandler 包装处理函数（公开方法）
-func (c *CrudController[T]) WrapHandler(handler types.HandlerFunc) gin.HandlerFunc {
+func (c *CrudController[T, TID]) WrapHandler(handler types.HandlerFunc) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// 检查请求的APiRoute是否开启缓存
 		route := c.GetRoute(ctx)
@@ -165,17 +165,17 @@ func (c *CrudController[T]) WrapHandler(handler types.HandlerFunc) gin.HandlerFu
 }
 
 // AddRoute 添加自定义路由
-func (c *CrudController[T]) AddRoute(route types.APIRoute) {
+func (c *CrudController[T, TID]) AddRoute(route types.APIRoute) {
 	c.routes = append(c.routes, route)
 }
 
 // AddRoutes 添加多个自定义路由
-func (c *CrudController[T]) AddRoutes(routes []types.APIRoute) {
+func (c *CrudController[T, TID]) AddRoutes(routes []types.APIRoute) {
 	c.routes = append(c.routes, routes...)
 }
 
 // RegisterRoutes 注册所有路由
-func (c *CrudController[T]) RegisterRoutes(group *gin.RouterGroup) {
+func (c *CrudController[T, TID]) RegisterRoutes(group *gin.RouterGroup) {
 	// 注册所有路由
 	for _, route := range c.routes {
 		// 获取中间件
@@ -202,7 +202,7 @@ func (c *CrudController[T]) RegisterRoutes(group *gin.RouterGroup) {
 }
 
 // GetRoute 根据请求获取APIRoute
-func (c *CrudController[T]) GetRoute(ctx *gin.Context) *types.APIRoute {
+func (c *CrudController[T, TID]) GetRoute(ctx *gin.Context) *types.APIRoute {
 	// 获取当前请求的方法和路径
 	method := ctx.Request.Method
 	path := ctx.Request.URL.Path
@@ -240,12 +240,12 @@ func (c *CrudController[T]) GetRoute(ctx *gin.Context) *types.APIRoute {
 }
 
 // GetRoutes 获取所有路由
-func (c *CrudController[T]) GetRoutes() []types.APIRoute {
+func (c *CrudController[T, TID]) GetRoutes() []types.APIRoute {
 	return c.routes
 }
 
 // standardRoutes 标准路由
-func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.APIRoute {
+func (c *CrudController[T, TID]) standardRoutes(cache bool, cacheTTL int) []types.APIRoute {
 
 	return []types.APIRoute{
 		{
@@ -337,7 +337,7 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 }
 
 // queryParams 获取查询参数
-func (c *CrudController[T]) queryParams() []types.Parameter {
+func (c *CrudController[T, TID]) queryParams() []types.Parameter {
 	// 获取实体类型的字段
 	entityType := reflect.TypeOf(c.entity)
 	if entityType.Kind() == reflect.Ptr {
@@ -470,11 +470,11 @@ func (c *CrudController[T]) queryParams() []types.Parameter {
 }
 
 // GetEntityName 获取实体名称
-func (c *CrudController[T]) GetEntityName() string {
+func (c *CrudController[T, TID]) GetEntityName() string {
 	return c.entityName
 }
 
 // GetEntity 获取实体
-func (c *CrudController[T]) GetEntity() ICrudEntity {
+func (c *CrudController[T, TID]) GetEntity() ICrudEntity[TID] {
 	return c.entity
 }

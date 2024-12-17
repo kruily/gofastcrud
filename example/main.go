@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/kruily/gofastcrud/core/crud"
 	"github.com/kruily/gofastcrud/core/crud/module"
 	"github.com/kruily/gofastcrud/core/database"
@@ -77,7 +78,7 @@ func main() {
 	module.CRUD_MODULE.WithLogger(logService)
 
 	// 创建服务实例
-	srv := server.NewServer(cfg)
+	srv := server.NewServer[string](cfg)
 	// 注册服务
 	module.CRUD_MODULE.WithServer(srv)
 	// 发布路由
@@ -85,7 +86,7 @@ func main() {
 	srv.PublishVersion(server.V2)
 
 	// 创建控制器工厂
-	factory := crud.NewControllerFactory(db.DB())
+	factory := crud.NewControllerFactory[uuid.UUID](db.DB())
 	factory.RegisterBatchCustom(srv, controllers.NewUserController, controllers.NewBookController)
 	factory.RegisterBatch(srv, &models.Category{})
 
