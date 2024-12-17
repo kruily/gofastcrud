@@ -19,6 +19,7 @@ const (
 	ErrUserNotFound    ErrorCode = 2000
 	ErrUserExists      ErrorCode = 2001
 	ErrInvalidPassword ErrorCode = 2002
+	ErrInvalidParam    ErrorCode = 2003
 
 	// 数据库错误码 (3000-3999)
 	ErrDatabase       ErrorCode = 3000

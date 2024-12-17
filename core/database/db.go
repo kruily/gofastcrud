@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -18,6 +19,7 @@ import (
 type Database struct {
 	db     *gorm.DB
 	models []interface{}
+	config *config.DatabaseConfig
 }
 
 // New 创建数据库管理器实例
@@ -32,9 +34,54 @@ func (d *Database) RegisterModels(models ...interface{}) {
 	d.models = append(d.models, models...)
 }
 
+// ConfigurePool 配置连接池
+func (d *Database) ConfigurePool(cfg *config.DatabaseConfig) error {
+	sqlDB, err := d.db.DB()
+	if err != nil {
+		return fmt.Errorf("获取数据库实例失败: %v", err)
+	}
+
+	// 设置最大空闲连接数
+	if cfg.MaxIdleConns > 0 {
+		sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
+	}
+
+	// 设置最大打开连接数
+	if cfg.MaxOpenConns > 0 {
+		sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	}
+
+	// 设置连接最大生命周期
+	if cfg.ConnMaxLifetime > 0 {
+		sqlDB.SetConnMaxLifetime(time.Duration(cfg.ConnMaxLifetime) * time.Second)
+	}
+
+	// 设置连接最大空闲时间
+	if cfg.ConnMaxIdleTime > 0 {
+		sqlDB.SetConnMaxIdleTime(time.Duration(cfg.ConnMaxIdleTime) * time.Second)
+	}
+
+	// 验证连接池配置
+	if err := sqlDB.Ping(); err != nil {
+		return fmt.Errorf("连接池配置验证失败: %v", err)
+	}
+
+	return nil
+}
+
+// GetStats 获取连接池统计信息
+func (d *Database) GetStats() sql.DBStats {
+	sqlDB, err := d.db.DB()
+	if err != nil {
+		return sql.DBStats{}
+	}
+	return sqlDB.Stats()
+}
+
 // Init 初始化数据库连接
 func (d *Database) Init(cfg *config.DatabaseConfig) error {
 	var err error
+	d.config = cfg
 
 	switch cfg.Driver {
 	case "mysql":
@@ -59,21 +106,17 @@ func (d *Database) Init(cfg *config.DatabaseConfig) error {
 	}
 
 	// 配置连接池
-	sqlDB, err := d.db.DB()
-	if err != nil {
-		return fmt.Errorf("获取数据库实例失败: %v", err)
+	if err := d.ConfigurePool(cfg); err != nil {
+		return err
 	}
-
-	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
-	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
-	sqlDB.SetConnMaxLifetime(time.Duration(cfg.ConnMaxLifetime) * time.Second)
 
 	// 自动迁移表结构
 	if err := d.AutoMigrate(); err != nil {
 		return fmt.Errorf("failed to auto migrate: %v", err)
 	}
 
-	log.Println("Database connected successfully")
+	log.Printf("Database connected successfully with pool configuration: (MaxIdleConns: %d, MaxOpenConns: %d, ConnMaxLifetime: %ds)",
+		cfg.MaxIdleConns, cfg.MaxOpenConns, cfg.ConnMaxLifetime)
 	return nil
 }
 

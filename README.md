@@ -45,8 +45,12 @@ database:
 ### 2. 启动服务
 ```go
 // main.go
+// 加载配置管理器
+configManager := module.CRUD_MODULE.GetService(module.ConfigService).(*config.ConfigManager)
 // 加载配置
-cfg := config.Load("example/config/config.yaml")
+configManager.LoadConfig()
+// 获取配置
+cfg := configManager.GetConfig()
 // 创建数据库管理器
 db := database.New()
 if err := db.Init(cfg.Database); err != nil {

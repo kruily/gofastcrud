@@ -12,7 +12,6 @@ import (
 	"github.com/kruily/gofastcrud/core/crud/types"
 	"github.com/kruily/gofastcrud/pkg/config"
 	"github.com/kruily/gofastcrud/pkg/errors"
-	"github.com/kruily/gofastcrud/pkg/validator"
 	"gorm.io/gorm"
 )
 
@@ -37,6 +36,11 @@ type ICrudController[T ICrudEntity] interface {
 	GetEntityName() string
 	// EnableCache 启用缓存
 	EnableCache(cacheTTL int)
+
+	// 批量操作
+	BatchCreate(ctx *gin.Context) (interface{}, error)
+	BatchUpdate(ctx *gin.Context) (interface{}, error)
+	BatchDelete(ctx *gin.Context) (interface{}, error)
 }
 
 // CrudController 控制器实现
@@ -104,121 +108,6 @@ func (c *CrudController[T]) configurePreloads() {
 	if len(preloadFields) > 0 {
 		c.Repository.Preload(preloadFields...)
 	}
-}
-
-// Create 创建实体
-func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
-	var entity T
-	if err := ctx.ShouldBindJSON(&entity); err != nil {
-		return nil, err
-	}
-
-	// 验证实体
-	if err := validator.Validate(entity); err != nil {
-		return nil, err
-	}
-
-	err := c.Repository.Create(ctx, &entity)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.Responser.Success(entity), nil
-}
-
-// GetById 根据ID获取实体
-func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
-	id := ctx.Param("id")
-	if id == "" {
-		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
-	}
-
-	idInt, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		return nil, errors.New(errors.ErrNotFound, "invalid id format")
-	}
-
-	entity, err := c.Repository.FindById(ctx, uint(idInt))
-	if err != nil {
-		return nil, err
-	}
-
-	if entity == nil {
-		return nil, errors.New(errors.ErrNotFound, "record not found")
-	}
-
-	return c.Responser.Success(entity), nil
-}
-
-// List 获取实体列表
-func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
-	// 构建查询选项
-	opts := c.buildQueryOptions(ctx)
-
-	// 执行查询
-	items, err := c.Repository.Find(ctx, &c.entity, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	// 获取总数
-	total, err := c.Repository.Count(ctx, &c.entity)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.Responser.Pagenation(items, total, opts.Page, opts.PageSize), nil
-}
-
-// Update 更新实体
-func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
-	id := ctx.Param("id")
-	if id == "" {
-		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
-	}
-
-	var entity T
-	if err := ctx.ShouldBindJSON(&entity); err != nil {
-		return nil, err
-	}
-
-	// 验证实体
-	if err := validator.Validate(entity); err != nil {
-		return nil, err
-	}
-
-	idInt, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		return nil, errors.New(errors.ErrNotFound, "invalid id format")
-	}
-
-	entity.SetID(uint(idInt))
-
-	if err := c.Repository.Update(ctx, &entity); err != nil {
-		return nil, err
-	}
-
-	return c.Responser.Success(entity), nil
-}
-
-// Delete 删除实体
-func (c *CrudController[T]) Delete(ctx *gin.Context) (interface{}, error) {
-	id := ctx.Param("id")
-	if id == "" {
-		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
-	}
-
-	idInt, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		return nil, errors.New(errors.ErrNotFound, "invalid id format")
-	}
-
-	opts := options.NewDeleteOptions()
-	if err := c.Repository.DeleteById(ctx, uint(idInt), opts); err != nil {
-		return nil, err
-	}
-
-	return c.Responser.Success(nil), nil
 }
 
 // buildQueryOptions 构建查询选项
@@ -410,6 +299,39 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 			Description: fmt.Sprintf("Delete an existing %s", c.entityName),
 			Handler:     c.Delete,
 			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "delete"), TTL: cacheTTL},
+		},
+		{
+			Path:        "/batch",
+			Method:      "POST",
+			Tags:        []string{c.entityName},
+			Summary:     fmt.Sprintf("Batch Create %s", c.entityName),
+			Description: fmt.Sprintf("Create multiple %s records", c.entityName),
+			Handler:     c.BatchCreate,
+			Request:     []T{},
+			Response:    []T{},
+			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "batchCreate"), TTL: cacheTTL},
+		},
+		{
+			Path:        "/batch",
+			Method:      "PUT",
+			Tags:        []string{c.entityName},
+			Summary:     fmt.Sprintf("Batch Update %s", c.entityName),
+			Description: fmt.Sprintf("Update multiple %s records", c.entityName),
+			Handler:     c.BatchUpdate,
+			Request:     []T{c.entity},
+			Response:    []T{c.entity},
+			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "batchUpdate"), TTL: cacheTTL},
+		},
+		{
+			Path:        "/batch",
+			Method:      "DELETE",
+			Tags:        []string{c.entityName},
+			Summary:     fmt.Sprintf("Batch Delete %s", c.entityName),
+			Description: fmt.Sprintf("Delete multiple %s records", c.entityName),
+			Handler:     c.BatchDelete,
+			Request:     []uint{},
+			Response:    nil,
+			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "batchDelete"), TTL: cacheTTL},
 		},
 	}
 }
