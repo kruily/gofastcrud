@@ -14,6 +14,7 @@ const (
 	ErrNotFound     ErrorCode = 1003
 	ErrValidation   ErrorCode = 1004
 	ErrTimeout      ErrorCode = 1005
+	ErrIDType       ErrorCode = 1006
 
 	// 业务级错误码 (2000-2999)
 	ErrUserNotFound    ErrorCode = 2000

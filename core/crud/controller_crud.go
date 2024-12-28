@@ -11,7 +11,7 @@ import (
 )
 
 // Create 创建实体
-func (c *CrudController[T, TID]) Create(ctx *gin.Context) (interface{}, error) {
+func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
 	var entity T
 	if err := ctx.ShouldBindJSON(&entity); err != nil {
 		return nil, err
@@ -31,28 +31,18 @@ func (c *CrudController[T, TID]) Create(ctx *gin.Context) (interface{}, error) {
 }
 
 // GetById 根据ID获取实体
-func (c *CrudController[T, TID]) GetById(ctx *gin.Context) (interface{}, error) {
+func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
 	id := ctx.Param("id")
 	if id == "" {
 		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
 	}
-	var idTID TID
+	var idTID any
 
 	// 处理 UUID 类型
 	if idUUID, err := uuid.Parse(id); err == nil {
-		// 如果 TID 是 uuid.UUID 类型
-		if _, ok := any(idTID).(TID); ok {
-			idTID = any(idUUID).(TID) // 类型断言
-		} else {
-			return nil, errors.New(errors.ErrInvalidParam, "invalid id parameter type")
-		}
+		idTID = idUUID // 直接赋值
 	} else if idInt, err := strconv.ParseUint(id, 10, 64); err == nil {
-		// 如果 TID 是 uint 类型
-		if _, ok := any(idTID).(TID); ok {
-			idTID = any(idInt).(TID) // 转换为 TID
-		} else {
-			return nil, errors.New(errors.ErrInvalidParam, "invalid id parameter type")
-		}
+		idTID = idInt // 直接赋值
 	} else {
 		return nil, errors.New(errors.ErrInvalidParam, "invalid id parameter")
 	}
@@ -70,7 +60,7 @@ func (c *CrudController[T, TID]) GetById(ctx *gin.Context) (interface{}, error) 
 }
 
 // List 获取实体列表
-func (c *CrudController[T, TID]) List(ctx *gin.Context) (interface{}, error) {
+func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
 	// 构建查询选项
 	opts := c.buildQueryOptions(ctx)
 
@@ -90,7 +80,7 @@ func (c *CrudController[T, TID]) List(ctx *gin.Context) (interface{}, error) {
 }
 
 // Update 更新实体
-func (c *CrudController[T, TID]) Update(ctx *gin.Context) (interface{}, error) {
+func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 	id := ctx.Param("id")
 	if id == "" {
 		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
@@ -111,7 +101,7 @@ func (c *CrudController[T, TID]) Update(ctx *gin.Context) (interface{}, error) {
 		return nil, errors.New(errors.ErrNotFound, "invalid id format")
 	}
 
-	entity.SetID(any(idInt).(TID))
+	entity.SetID(idInt)
 
 	if err := c.Repository.Update(ctx, &entity); err != nil {
 		return nil, err
@@ -121,7 +111,7 @@ func (c *CrudController[T, TID]) Update(ctx *gin.Context) (interface{}, error) {
 }
 
 // Delete 删除实体
-func (c *CrudController[T, TID]) Delete(ctx *gin.Context) (interface{}, error) {
+func (c *CrudController[T]) Delete(ctx *gin.Context) (interface{}, error) {
 	id := ctx.Param("id")
 	if id == "" {
 		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
@@ -133,7 +123,7 @@ func (c *CrudController[T, TID]) Delete(ctx *gin.Context) (interface{}, error) {
 	}
 
 	opts := options.NewDeleteOptions()
-	if err := c.Repository.DeleteById(ctx, any(idInt).(TID), opts); err != nil {
+	if err := c.Repository.DeleteById(ctx, idInt, opts); err != nil {
 		return nil, err
 	}
 
@@ -141,7 +131,7 @@ func (c *CrudController[T, TID]) Delete(ctx *gin.Context) (interface{}, error) {
 }
 
 // BatchCreate 批量创建实体
-func (c *CrudController[T, TID]) BatchCreate(ctx *gin.Context) (interface{}, error) {
+func (c *CrudController[T]) BatchCreate(ctx *gin.Context) (interface{}, error) {
 	var entities []T
 	if err := ctx.ShouldBindJSON(&entities); err != nil {
 		return nil, err
@@ -155,7 +145,7 @@ func (c *CrudController[T, TID]) BatchCreate(ctx *gin.Context) (interface{}, err
 	}
 
 	// 使用事务进行批量创建
-	err := c.Repository.Transaction(ctx, func(tx IRepository[T, TID]) error {
+	err := c.Repository.Transaction(ctx, func(tx IRepository[T]) error {
 		return tx.BatchCreate(ctx, entities)
 	})
 
@@ -167,7 +157,7 @@ func (c *CrudController[T, TID]) BatchCreate(ctx *gin.Context) (interface{}, err
 }
 
 // BatchUpdate 批量更新实体
-func (c *CrudController[T, TID]) BatchUpdate(ctx *gin.Context) (interface{}, error) {
+func (c *CrudController[T]) BatchUpdate(ctx *gin.Context) (interface{}, error) {
 	var entities []T
 	if err := ctx.ShouldBindJSON(&entities); err != nil {
 		return nil, err
@@ -181,7 +171,7 @@ func (c *CrudController[T, TID]) BatchUpdate(ctx *gin.Context) (interface{}, err
 	}
 
 	// 使用事务进行批量更新
-	err := c.Repository.Transaction(ctx, func(tx IRepository[T, TID]) error {
+	err := c.Repository.Transaction(ctx, func(tx IRepository[T]) error {
 		return tx.BatchUpdate(ctx, entities)
 	})
 
@@ -193,8 +183,8 @@ func (c *CrudController[T, TID]) BatchUpdate(ctx *gin.Context) (interface{}, err
 }
 
 // BatchDelete 批量删除实体
-func (c *CrudController[T, TID]) BatchDelete(ctx *gin.Context) (interface{}, error) {
-	var ids []TID
+func (c *CrudController[T]) BatchDelete(ctx *gin.Context) (interface{}, error) {
+	var ids []any
 	if err := ctx.ShouldBindJSON(&ids); err != nil {
 		return nil, err
 	}
@@ -204,7 +194,7 @@ func (c *CrudController[T, TID]) BatchDelete(ctx *gin.Context) (interface{}, err
 	}
 
 	// 使用事务进行批量删除
-	err := c.Repository.Transaction(ctx, func(tx IRepository[T, TID]) error {
+	err := c.Repository.Transaction(ctx, func(tx IRepository[T]) error {
 		return tx.BatchDelete(ctx, ids)
 	})
 
