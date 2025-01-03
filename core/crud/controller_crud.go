@@ -32,7 +32,7 @@ func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
 
 // GetById 根据ID获取实体
 func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
-	id := ctx.Param("id")
+	id := ctx.Param(c.entityName + "_id")
 	if id == "" {
 		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
 	}
@@ -81,7 +81,7 @@ func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
 
 // Update 更新实体
 func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
-	id := ctx.Param("id")
+	id := ctx.Param(c.entityName + "_id")
 	if id == "" {
 		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
 	}
@@ -112,7 +112,7 @@ func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 
 // Delete 删除实体
 func (c *CrudController[T]) Delete(ctx *gin.Context) (interface{}, error) {
-	id := ctx.Param("id")
+	id := ctx.Param(c.entityName + "_id")
 	if id == "" {
 		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
 	}

@@ -8,7 +8,6 @@ import (
 	"github.com/kruily/gofastcrud/core/crud/module"
 	"github.com/kruily/gofastcrud/core/database"
 	"github.com/kruily/gofastcrud/core/server"
-	"github.com/kruily/gofastcrud/example/controllers"
 	"github.com/kruily/gofastcrud/example/models"
 	"github.com/kruily/gofastcrud/pkg/config"
 	"github.com/kruily/gofastcrud/pkg/logger"
@@ -86,9 +85,10 @@ func main() {
 
 	// 创建控制器工厂
 	factory := crud.NewControllerFactory(db.DB())
-	factory.RegisterBatchCustom(srv, controllers.NewUserController, controllers.NewBookController)
-	factory.RegisterBatch(srv, &models.Category{})
-
+	// factory.RegisterBatchCustom(srv, controllers.NewUserController, controllers.NewBookController)
+	// factory.RegisterBatch(srv, &models.Category{})
+	g := factory.Register(srv, &models.User{})
+	factory.RegisterWithGroup(srv, g, &models.Book{})
 	// 运行服务（包含优雅启停）
 	if err := srv.Run(); err != nil {
 		log.Fatalf("Server error: %v", err)

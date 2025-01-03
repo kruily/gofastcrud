@@ -29,7 +29,9 @@ type ICrudController[T ICrudEntity] interface {
 	GetMiddlewares() map[string][]gin.HandlerFunc
 
 	// 路由注册
-	RegisterRoutes(group *gin.RouterGroup)
+	RegisterRoutes()
+	GetGroup() *gin.RouterGroup
+	SetGroup(group *gin.RouterGroup)
 	// GetEntity 获取实体
 	GetEntity() ICrudEntity
 	// GetEntityName 获取实体名称
@@ -52,6 +54,7 @@ type CrudController[T ICrudEntity] struct {
 	entityName  string // 添加实体名称字段
 	middlewares map[string][]gin.HandlerFunc
 	routes      []types.APIRoute
+	group       *gin.RouterGroup
 }
 
 // NewCrudController 创建控制器
@@ -61,6 +64,7 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 		entityType = entityType.Elem()
 	}
 	entityName := entityType.Name()
+	entityName = strings.ToLower(entityName[:1]) + entityName[1:]
 
 	c := &CrudController[T]{
 		Repository:  NewRepository(db, entity),
@@ -175,7 +179,7 @@ func (c *CrudController[T]) AddRoutes(routes []types.APIRoute) {
 }
 
 // RegisterRoutes 注册所有路由
-func (c *CrudController[T]) RegisterRoutes(group *gin.RouterGroup) {
+func (c *CrudController[T]) RegisterRoutes() {
 	// 注册所有路由
 	for _, route := range c.routes {
 		// 获取中间件
@@ -186,17 +190,17 @@ func (c *CrudController[T]) RegisterRoutes(group *gin.RouterGroup) {
 
 		switch route.Method {
 		case "GET":
-			group.GET(route.Path, handlers...)
+			c.group.GET(route.Path, handlers...)
 		case "POST":
-			group.POST(route.Path, handlers...)
+			c.group.POST(route.Path, handlers...)
 		case "PUT":
-			group.PUT(route.Path, handlers...)
+			c.group.PUT(route.Path, handlers...)
 		case "DELETE":
-			group.DELETE(route.Path, handlers...)
+			c.group.DELETE(route.Path, handlers...)
 		case "PATCH":
-			group.PATCH(route.Path, handlers...)
+			c.group.PATCH(route.Path, handlers...)
 		case "OPTIONS":
-			group.OPTIONS(route.Path, handlers...)
+			c.group.OPTIONS(route.Path, handlers...)
 		}
 	}
 }
@@ -249,7 +253,7 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 
 	return []types.APIRoute{
 		{
-			Path:        "/:id",
+			Path:        "/:" + c.entityName + "_id",
 			Method:      "GET",
 			Tags:        []string{c.entityName},
 			Summary:     fmt.Sprintf("Get %s by ID", c.entityName),
@@ -281,7 +285,7 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "create"), TTL: cacheTTL},
 		},
 		{
-			Path:        "/:id",
+			Path:        "/:" + c.entityName + "_id",
 			Method:      "POST",
 			Tags:        []string{c.entityName},
 			Summary:     fmt.Sprintf("Update %s", c.entityName),
@@ -292,7 +296,7 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "update"), TTL: cacheTTL},
 		},
 		{
-			Path:        "/:id",
+			Path:        "/:" + c.entityName + "_id",
 			Method:      "DELETE",
 			Tags:        []string{c.entityName},
 			Summary:     fmt.Sprintf("Delete %s", c.entityName),
@@ -477,4 +481,14 @@ func (c *CrudController[T]) GetEntityName() string {
 // GetEntity 获取实体
 func (c *CrudController[T]) GetEntity() ICrudEntity {
 	return c.entity
+}
+
+// GetGroup 获取路由组
+func (c *CrudController[T]) GetGroup() *gin.RouterGroup {
+	return c.group
+}
+
+// SetGroup 设置路由组
+func (c *CrudController[T]) SetGroup(group *gin.RouterGroup) {
+	c.group = group
 }

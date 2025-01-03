@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kruily/gofastcrud/core/crud"
 	"github.com/kruily/gofastcrud/core/crud/types"
 	"github.com/kruily/gofastcrud/core/swagger" // swagger files
 	"github.com/kruily/gofastcrud/core/templates"
@@ -141,14 +142,36 @@ func (s *Server) EnableSwagger() {
 func (s *Server) RegisterCrudController(path string, controller interface{}, entityType reflect.Type) {
 	for version, group := range s.apiGroups {
 		routePath := strings.TrimPrefix(path, "/")
-		if c, ok := controller.(interface{ RegisterRoutes(*gin.RouterGroup) }); ok {
-			versionGroup := group.Group(path)
-			c.RegisterRoutes(versionGroup)
+		if c, ok := controller.(crud.ICrudController[crud.ICrudEntity]); ok {
+			g := group.Group(routePath)
+			c.SetGroup(g)
+			c.RegisterRoutes()
 		}
 
 		// 生成对应版本的文档
 		if s.enableSwagger {
 			s.swaggerGen.RegisterEntityWithVersion(entityType, group.BasePath(), routePath, controller, string(version))
 		}
+	}
+}
+
+func (s *Server) RegisterWithGroup(group *gin.RouterGroup, path string, controller interface{}, entityType reflect.Type) {
+	routePath := strings.TrimPrefix(path, "/")
+	basepath := strings.Split(group.BasePath(), "/")
+	base := basepath[len(basepath)-1]
+	if base[len(base)-1] == 's' {
+		base = base[:len(base)-1]
+	}
+	base += "_id"
+	routePath = ":" + base + "/" + routePath
+	if c, ok := controller.(crud.ICrudController[crud.ICrudEntity]); ok {
+		g := group.Group(routePath)
+		c.SetGroup(g)
+		c.RegisterRoutes()
+	}
+	version := s.versionManager.ParseVersionFromPath(group.BasePath())
+	// 生成对应版本的文档
+	if s.enableSwagger {
+		s.swaggerGen.RegisterEntityWithVersion(entityType, group.BasePath(), routePath, controller, string(version))
 	}
 }
