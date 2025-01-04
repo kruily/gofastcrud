@@ -155,13 +155,14 @@ func (s *Server) RegisterCrudController(path string, controller interface{}, ent
 	}
 }
 
-func (s *Server) RegisterWithGroup(group *gin.RouterGroup, path string, controller interface{}, entityType reflect.Type) {
+func (s *Server) RegisterCrudControllerWithFather(father any, path string, controller interface{}, entityType reflect.Type) {
+	f := father.(crud.ICrudController[crud.ICrudEntity])
 	routePath := strings.TrimPrefix(path, "/")
-	base := controller.(crud.ICrudController[crud.ICrudEntity]).GetEntityName()
+	base := f.GetEntityName()
 	base = strings.ToLower(base[:1]) + base[1:]
-	routePath = ":" + base + "/" + routePath
+	routePath = ":" + base + "_id/" + routePath
 	if c, ok := controller.(crud.ICrudController[crud.ICrudEntity]); ok {
-		g := group.Group(routePath)
+		g := f.GetGroup().Group(routePath)
 		c.SetGroup(g)
 		c.RegisterRoutes()
 		version := s.versionManager.ParseVersionFromPath(g.BasePath())

@@ -3,7 +3,6 @@ package crud
 import (
 	"reflect"
 
-	"github.com/gin-gonic/gin"
 	"github.com/kruily/gofastcrud/core/crud/types"
 	"gorm.io/gorm"
 )
@@ -22,10 +21,10 @@ func NewControllerFactory(db *gorm.DB) *ControllerFactory {
 // 简单注册，默认注册
 // server 是注册服务器
 // model 是实体
-func (f *ControllerFactory) Register(server types.RegisterServer, model ICrudEntity) *gin.RouterGroup {
+func (f *ControllerFactory) Register(server types.RegisterServer, model ICrudEntity) ICrudController[ICrudEntity] {
 	controller := NewCrudController(f.db, model)
 	server.RegisterCrudController(model.Table(), controller, reflect.TypeOf(model))
-	return controller.GetGroup()
+	return controller
 }
 
 // RegisterWithGroup 注册后台路由组
@@ -33,16 +32,16 @@ func (f *ControllerFactory) Register(server types.RegisterServer, model ICrudEnt
 // server 是注册服务器
 // group 是路由组
 // model 是实体
-func (f *ControllerFactory) RegisterWithGroup(server types.RegisterServer, group *gin.RouterGroup, model ICrudEntity) *gin.RouterGroup {
+func (f *ControllerFactory) RegisterWithFather(server types.RegisterServer, father ICrudController[ICrudEntity], model ICrudEntity) ICrudController[ICrudEntity] {
 	controller := NewCrudController(f.db, model)
-	server.RegisterWithGroup(group, model.Table(), controller, reflect.TypeOf(model))
-	return controller.GetGroup()
+	server.RegisterCrudControllerWithFather(father, model.Table(), controller, reflect.TypeOf(model))
+	return controller
 }
 
-func (f *ControllerFactory) RegisterWithGroupCustom(server types.RegisterServer, group *gin.RouterGroup, constructor func(*gorm.DB) ICrudController[ICrudEntity]) *gin.RouterGroup {
+func (f *ControllerFactory) RegisterWithFatherCustom(server types.RegisterServer, father ICrudController[ICrudEntity], constructor func(*gorm.DB) ICrudController[ICrudEntity]) ICrudController[ICrudEntity] {
 	controller := constructor(f.db)
-	server.RegisterWithGroup(group, controller.GetEntity().Table(), controller, reflect.TypeOf(controller.GetEntity()))
-	return controller.GetGroup()
+	server.RegisterCrudControllerWithFather(father, controller.GetEntity().Table(), controller, reflect.TypeOf(controller.GetEntity()))
+	return controller
 }
 
 // RegisterBatch 批量注册实体
