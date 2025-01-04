@@ -19,6 +19,9 @@ func NewControllerFactory(db *gorm.DB) *ControllerFactory {
 }
 
 // RegisterGroup 注册后台路由组
+// 简单注册，默认注册
+// server 是注册服务器
+// model 是实体
 func (f *ControllerFactory) Register(server types.RegisterServer, model ICrudEntity) *gin.RouterGroup {
 	controller := NewCrudController(f.db, model)
 	server.RegisterCrudController(model.Table(), controller, reflect.TypeOf(model))
@@ -36,7 +39,16 @@ func (f *ControllerFactory) RegisterWithGroup(server types.RegisterServer, group
 	return controller.GetGroup()
 }
 
+func (f *ControllerFactory) RegisterWithGroupCustom(server types.RegisterServer, group *gin.RouterGroup, constructor func(*gorm.DB) ICrudController[ICrudEntity]) *gin.RouterGroup {
+	controller := constructor(f.db)
+	server.RegisterWithGroup(group, controller.GetEntity().Table(), controller, reflect.TypeOf(controller.GetEntity()))
+	return controller.GetGroup()
+}
+
 // RegisterBatch 批量注册实体
+// 使用场景：当需要批量注册实体,且没有自定义控制器，可以通过此方法注册
+// server 是注册服务器
+// models 是实体
 func (f *ControllerFactory) RegisterBatch(server types.RegisterServer, models ...ICrudEntity) {
 	for _, model := range models {
 		server.RegisterCrudController(model.Table(), NewCrudController(f.db, model), reflect.TypeOf(model))
@@ -44,10 +56,13 @@ func (f *ControllerFactory) RegisterBatch(server types.RegisterServer, models ..
 }
 
 // RegisterBatchCustom 批量注册自定义控制器
+// 使用场景：当需要批量注册自定义控制器,可以通过此方法注册
+// server 是注册服务器
+// controllerConstructor 是控制器构造函数
 func (f *ControllerFactory) RegisterBatchCustom(server types.RegisterServer, controllerConstructor ...func(*gorm.DB) ICrudController[ICrudEntity]) {
 	for _, constructor := range controllerConstructor {
 		controller := constructor(f.db)
-		server.RegisterCrudController(controller.GetEntityName(), controller, reflect.TypeOf(controller.GetEntity()))
+		server.RegisterCrudController(controller.GetEntity().Table(), controller, reflect.TypeOf(controller.GetEntity()))
 	}
 }
 

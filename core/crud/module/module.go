@@ -3,9 +3,9 @@ package module
 import (
 	"sync"
 
+	"github.com/kruily/gofastcrud/config"
 	"github.com/kruily/gofastcrud/core/database"
-	"github.com/kruily/gofastcrud/pkg/config"
-	"github.com/kruily/gofastcrud/pkg/utils"
+	"github.com/kruily/gofastcrud/utils"
 )
 
 type IModule interface{}

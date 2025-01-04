@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/kruily/gofastcrud/pkg/config"
+	"github.com/kruily/gofastcrud/config"
 )
 
 // Database 数据库管理器

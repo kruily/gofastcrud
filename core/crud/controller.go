@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kruily/gofastcrud/config"
 	"github.com/kruily/gofastcrud/core/crud/module"
 	"github.com/kruily/gofastcrud/core/crud/options"
 	"github.com/kruily/gofastcrud/core/crud/types"
-	"github.com/kruily/gofastcrud/pkg/config"
-	"github.com/kruily/gofastcrud/pkg/errors"
+	"github.com/kruily/gofastcrud/errors"
 	"gorm.io/gorm"
 )
 
@@ -64,7 +64,7 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 		entityType = entityType.Elem()
 	}
 	entityName := entityType.Name()
-	entityName = strings.ToLower(entityName[:1]) + entityName[1:]
+	// entityName = strings.ToLower(entityName[:1]) + entityName[1:]
 
 	c := &CrudController[T]{
 		Repository:  NewRepository(db, entity),
@@ -250,14 +250,14 @@ func (c *CrudController[T]) GetRoutes() []types.APIRoute {
 
 // standardRoutes 标准路由
 func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.APIRoute {
-
+	entityName := strings.ToLower(c.entityName[:1]) + c.entityName[1:]
 	return []types.APIRoute{
 		{
-			Path:        "/:" + c.entityName + "_id",
+			Path:        "/:" + entityName + "_id",
 			Method:      "GET",
 			Tags:        []string{c.entityName},
-			Summary:     fmt.Sprintf("Get %s by ID", c.entityName),
-			Description: fmt.Sprintf("Get a single %s by its ID", c.entityName),
+			Summary:     fmt.Sprintf("Get %s by ID", entityName),
+			Description: fmt.Sprintf("Get a single %s by its ID", entityName),
 			Handler:     c.GetById,
 			Response:    c.entity,
 			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "getById"), TTL: cacheTTL},
@@ -266,8 +266,8 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 			Path:        "",
 			Method:      "GET",
 			Tags:        []string{c.entityName},
-			Summary:     fmt.Sprintf("List %s", c.entityName),
-			Description: fmt.Sprintf("Get a list of %s with pagination and filters", c.entityName),
+			Summary:     fmt.Sprintf("List %s", entityName),
+			Description: fmt.Sprintf("Get a list of %s with pagination and filters", entityName),
 			Handler:     c.List,
 			Response:    []T{},
 			Parameters:  c.queryParams(),
@@ -277,30 +277,30 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 			Path:        "",
 			Method:      "POST",
 			Tags:        []string{c.entityName},
-			Summary:     fmt.Sprintf("Create %s", c.entityName),
-			Description: fmt.Sprintf("Create a new %s", c.entityName),
+			Summary:     fmt.Sprintf("Create %s", entityName),
+			Description: fmt.Sprintf("Create a new %s", entityName),
 			Handler:     c.Create,
 			Request:     c.entity,
 			Response:    c.entity,
 			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "create"), TTL: cacheTTL},
 		},
 		{
-			Path:        "/:" + c.entityName + "_id",
+			Path:        "/:" + entityName + "_id",
 			Method:      "POST",
 			Tags:        []string{c.entityName},
-			Summary:     fmt.Sprintf("Update %s", c.entityName),
-			Description: fmt.Sprintf("Update an existing %s", c.entityName),
+			Summary:     fmt.Sprintf("Update %s", entityName),
+			Description: fmt.Sprintf("Update an existing %s", entityName),
 			Handler:     c.Update,
 			Request:     c.entity,
 			Response:    c.entity,
 			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "update"), TTL: cacheTTL},
 		},
 		{
-			Path:        "/:" + c.entityName + "_id",
+			Path:        "/:" + entityName + "_id",
 			Method:      "DELETE",
 			Tags:        []string{c.entityName},
-			Summary:     fmt.Sprintf("Delete %s", c.entityName),
-			Description: fmt.Sprintf("Delete an existing %s", c.entityName),
+			Summary:     fmt.Sprintf("Delete %s", entityName),
+			Description: fmt.Sprintf("Delete an existing %s", entityName),
 			Handler:     c.Delete,
 			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "delete"), TTL: cacheTTL},
 		},
@@ -308,8 +308,8 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 			Path:        "/batch",
 			Method:      "POST",
 			Tags:        []string{c.entityName},
-			Summary:     fmt.Sprintf("Batch Create %s", c.entityName),
-			Description: fmt.Sprintf("Create multiple %s records", c.entityName),
+			Summary:     fmt.Sprintf("Batch Create %s", entityName),
+			Description: fmt.Sprintf("Create multiple %s records", entityName),
 			Handler:     c.BatchCreate,
 			Request:     []T{},
 			Response:    []T{},
@@ -330,8 +330,8 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 			Path:        "/batch",
 			Method:      "DELETE",
 			Tags:        []string{c.entityName},
-			Summary:     fmt.Sprintf("Batch Delete %s", c.entityName),
-			Description: fmt.Sprintf("Delete multiple %s records", c.entityName),
+			Summary:     fmt.Sprintf("Batch Delete %s", entityName),
+			Description: fmt.Sprintf("Delete multiple %s records", entityName),
 			Handler:     c.BatchDelete,
 			Request:     []uint{},
 			Response:    nil,

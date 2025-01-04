@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kruily/gofastcrud/config"
 	"github.com/kruily/gofastcrud/core/crud"
 	"github.com/kruily/gofastcrud/core/crud/types"
 	"github.com/kruily/gofastcrud/core/swagger" // swagger files
 	"github.com/kruily/gofastcrud/core/templates"
-	"github.com/kruily/gofastcrud/pkg/config"
 )
 
 type Server struct {
@@ -146,11 +146,11 @@ func (s *Server) RegisterCrudController(path string, controller interface{}, ent
 			g := group.Group(routePath)
 			c.SetGroup(g)
 			c.RegisterRoutes()
-		}
 
-		// 生成对应版本的文档
-		if s.enableSwagger {
-			s.swaggerGen.RegisterEntityWithVersion(entityType, group.BasePath(), routePath, controller, string(version))
+			// 生成对应版本的文档
+			if s.enableSwagger {
+				s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
+			}
 		}
 	}
 }
@@ -168,10 +168,13 @@ func (s *Server) RegisterWithGroup(group *gin.RouterGroup, path string, controll
 		g := group.Group(routePath)
 		c.SetGroup(g)
 		c.RegisterRoutes()
+		version := s.versionManager.ParseVersionFromPath(g.BasePath())
+		// 生成对应版本的文档
+		if s.enableSwagger {
+			routePath = strings.TrimPrefix(g.BasePath(), "/api/"+string(version))
+			routePath = strings.TrimPrefix(routePath, "/")
+			s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
+		}
 	}
-	version := s.versionManager.ParseVersionFromPath(group.BasePath())
-	// 生成对应版本的文档
-	if s.enableSwagger {
-		s.swaggerGen.RegisterEntityWithVersion(entityType, group.BasePath(), routePath, controller, string(version))
-	}
+
 }

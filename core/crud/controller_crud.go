@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/kruily/gofastcrud/core/crud/options"
-	"github.com/kruily/gofastcrud/pkg/errors"
-	"github.com/kruily/gofastcrud/pkg/validator"
+	"github.com/kruily/gofastcrud/errors"
+	"github.com/kruily/gofastcrud/validator"
 )
 
 // Create 创建实体

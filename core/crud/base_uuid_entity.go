@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kruily/gofastcrud/pkg/errors"
+	"github.com/kruily/gofastcrud/errors"
 	"gorm.io/gorm"
 )
 
