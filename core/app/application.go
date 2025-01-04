@@ -9,6 +9,7 @@ import (
 	"github.com/kruily/gofastcrud/core/crud/types"
 	"github.com/kruily/gofastcrud/core/database"
 	"github.com/kruily/gofastcrud/core/server"
+	"github.com/kruily/gofastcrud/logger"
 )
 
 // gofastcrud Application 应用
@@ -17,6 +18,7 @@ type GoFastCrudApp struct {
 	db            *database.Database
 	server        *server.Server
 	factory       *crud.ControllerFactory
+	logger        *logger.Logger
 }
 
 // NewDefaultApplication 创建默认应用
@@ -48,8 +50,8 @@ func (a *GoFastCrudApp) RegisterModels(models ...interface{}) {
 }
 
 // RegisterControllers 注册控制器
-func (a *GoFastCrudApp) RegisterControllers(fn func(*crud.ControllerFactory)) {
-	fn(a.factory)
+func (a *GoFastCrudApp) RegisterControllers(fn func(*crud.ControllerFactory, *server.Server)) {
+	fn(a.factory, a.server)
 }
 
 func (a *GoFastCrudApp) PublishVersion(version types.APIVersion) {
@@ -58,6 +60,15 @@ func (a *GoFastCrudApp) PublishVersion(version types.APIVersion) {
 
 func (a *GoFastCrudApp) GetServer() *server.Server {
 	return a.server
+}
+
+func (a *GoFastCrudApp) GetLogger() *logger.Logger {
+	return a.logger
+}
+
+func (a *GoFastCrudApp) WithLogger(logger *logger.Logger) {
+	a.logger = logger
+	module.CRUD_MODULE.WithLogger(logger)
 }
 
 // Start 启动应用

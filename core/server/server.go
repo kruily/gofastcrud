@@ -157,12 +157,8 @@ func (s *Server) RegisterCrudController(path string, controller interface{}, ent
 
 func (s *Server) RegisterWithGroup(group *gin.RouterGroup, path string, controller interface{}, entityType reflect.Type) {
 	routePath := strings.TrimPrefix(path, "/")
-	basepath := strings.Split(group.BasePath(), "/")
-	base := basepath[len(basepath)-1]
-	if base[len(base)-1] == 's' {
-		base = base[:len(base)-1]
-	}
-	base += "_id"
+	base := controller.(crud.ICrudController[crud.ICrudEntity]).GetEntityName()
+	base = strings.ToLower(base[:1]) + base[1:]
 	routePath = ":" + base + "/" + routePath
 	if c, ok := controller.(crud.ICrudController[crud.ICrudEntity]); ok {
 		g := group.Group(routePath)

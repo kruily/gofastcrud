@@ -97,10 +97,10 @@ func main() {
 
 	app.RegisterModels(&models.User{}, &models.Book{}, &models.Category{})
 
-	app.RegisterControllers(func(factory *crud.ControllerFactory) {
-		g := factory.Register(app.GetServer(), &models.User{})
-		g2 := factory.RegisterWithGroup(app.GetServer(), g, &models.Book{})
-		factory.RegisterWithGroup(app.GetServer(), g2, &models.Category{})
+	app.RegisterControllers(func(factory *crud.ControllerFactory, server *server.Server) {
+		g := factory.Register(server, &models.User{})
+		g2 := factory.RegisterWithGroup(server, g, &models.Book{})
+		factory.RegisterWithGroup(server, g2, &models.Category{})
 		// factory.RegisterBatchCustom(app.GetServer(), controllers.NewUserController, controllers.NewBookController)
 		// factory.RegisterBatch(app.GetServer(), &models.Category{})
 	})

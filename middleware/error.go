@@ -5,8 +5,8 @@ import (
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kruily/gofastcrud/pkg/errors"
-	"github.com/kruily/gofastcrud/pkg/logger"
+	"github.com/kruily/gofastcrud/errors"
+	"github.com/kruily/gofastcrud/logger"
 )
 
 // ErrorHandler 错误处理中间件

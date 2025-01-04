@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/kruily/gofastcrud/pkg/fast_casbin"
-	"github.com/kruily/gofastcrud/pkg/fast_jwt"
+	"github.com/kruily/gofastcrud/fast_casbin"
+	"github.com/kruily/gofastcrud/fast_jwt"
 
 	"github.com/gin-gonic/gin"
 )
