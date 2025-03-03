@@ -7,7 +7,6 @@ import (
 	"github.com/kruily/gofastcrud/core/app"
 	"github.com/kruily/gofastcrud/core/crud"
 	"github.com/kruily/gofastcrud/core/server"
-	"github.com/kruily/gofastcrud/example/models"
 	"github.com/kruily/gofastcrud/utils"
 )
 
@@ -26,84 +25,46 @@ func init() {
 }
 
 func main() {
-	// configManager := module.CRUD_MODULE.GetService(module.ConfigService).(*config.ConfigManager)
-	// configManager.LoadConfig()
-	// // 注册配置重载回调
-	// configManager.OnReload(func() {
-	// 	log.Println("Configuration reloaded")
-	// 	// 这里可以添加重载后的处理逻辑
-	// })
-	// // 获取配置
-	// cfg := configManager.GetConfig()
-
-	// // 获取数据库模组
-	// db := module.CRUD_MODULE.GetService(module.DatabaseService).(*database.Database)
-
-	// // 注册模型
-	// db.RegisterModels(
-	// 	&models.User{},
-	// 	&models.Book{},
-	// 	&models.Category{},
-	// 	// 添加其他模型
-	// )
-
-	// // 初始化数据库
-	// if err := db.Init(&cfg.Database); err != nil {
-	// 	log.Fatalf("Failed to initialize database: %v", err)
-	// }
-
-	// // 创建日志实例
-	// logService, err := logger.NewLogger(logger.Config{
-	// 	Level: logger.InfoLevel,
-	// 	FileConfig: &logger.FileConfig{
-	// 		Filename:   "logs/app.log",
-	// 		MaxSize:    100,
-	// 		MaxBackups: 3,
-	// 		MaxAge:     7,
-	// 		Compress:   true,
-	// 	},
-	// 	ConsoleLevel: logger.DebugLevel,
-	// })
-	// if err != nil {
-	// 	log.Fatal("Failed to create logger: ", err)
-	// }
-	// defer logService.Close()
-
-	// // 注册日志服务
-	// module.CRUD_MODULE.WithLogger(logService)
-
-	// // 创建服务实例
-	// srv := server.NewServer(cfg)
-	// // 注册服务
-	// module.CRUD_MODULE.WithServer(srv)
-	// // 发布路由
-	// srv.PublishVersion(server.V1)
-	// srv.PublishVersion(server.V2)
-
-	// // 创建控制器工厂
-	// factory := crud.NewControllerFactory(db.DB())
-	// // factory.RegisterBatchCustom(srv, controllers.NewUserController, controllers.NewBookController)
-	// // factory.RegisterBatch(srv, &models.Category{})
-	// g := factory.Register(srv, &models.User{})
-	// factory.RegisterWithGroup(srv, g, &models.Book{})
-	// // 运行服务（包含优雅启停）
-	// if err := srv.Run(); err != nil {
-	// 	log.Fatalf("Server error: %v", err)
-	// }
 
 	app := app.NewDefaultGoFastCrudApp()
 
 	app.PublishVersion(server.V1)
 
-	app.RegisterModels(&models.User{}, &models.Book{}, &models.Category{})
+	// app.RegisterModels(&models.User{}, &models.Book{}, &models.Category{})
 
 	app.RegisterControllers(func(factory *crud.ControllerFactory, server *server.Server) {
-		g := factory.Register(server, &models.User{})
-		g2 := factory.RegisterWithFather(server, g, &models.Book{})
-		factory.RegisterWithFather(server, g2, &models.Category{})
-		// factory.RegisterBatchCustom(app.GetServer(), controllers.NewUserController, controllers.NewBookController)
-		// factory.RegisterBatch(app.GetServer(), &models.Category{})
-	})
+		// 注册默认控制器
+		// factory.Register(server, models.User{})
+		// 使用自定义控制器
+		// factory.RegisterCustom(server, controllers.NewUserController)
 
+		// 使用批量注册
+		// factory.RegisterBatch(server, &models.User{}, &models.Book{}, &models.Category{})
+
+		// 使用批量注册自定义控制器
+		// factory.RegisterBatchCustom(server, controllers.NewUserController, controllers.NewBookController)
+
+		// 自定义路由名称（批量）
+		// factory.RegisterBatchMap(server, map[string]crud.ICrudEntity{
+		// 	"users": &models.User{},
+		// 	"books": &models.Book{},
+		// 	"categories": &models.Category{},
+		// })
+
+		// 自定义路由名称（批量自定义控制器）
+		// factory.RegisterBatchCustomMap(server, map[string]func(*gorm.DB) crud.ICrudController[crud.ICrudEntity]{
+		// 	"users": controllers.NewUserController,
+		// 	"books": controllers.NewBookController,
+		// 	"categories": controllers.NewCategoryController,
+		// })
+
+		// 路由继承
+		// g := factory.Register(server, &models.User{})
+		// _ = factory.RegisterWithFather(server, g, &models.Book{})
+
+		// 路由继承自定义控制器
+		// g := factory.RegisterCustom(server, controllers.NewUserController)
+		// _ = factory.RegisterWithFatherCustom(server, g, controllers.NewBookController)
+	})
 	app.Start()
 }

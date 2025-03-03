@@ -18,20 +18,12 @@ import (
 // Database 数据库管理器
 type Database struct {
 	db     *gorm.DB
-	models []interface{}
 	config *config.DatabaseConfig
 }
 
 // New 创建数据库管理器实例
 func New() *Database {
-	return &Database{
-		models: make([]interface{}, 0),
-	}
-}
-
-// RegisterModels 注册需要迁移的模型
-func (d *Database) RegisterModels(models ...interface{}) {
-	d.models = append(d.models, models...)
+	return &Database{}
 }
 
 // ConfigurePool 配置连接池
@@ -110,26 +102,9 @@ func (d *Database) Init(cfg *config.DatabaseConfig) error {
 		return err
 	}
 
-	// 自动迁移表结构
-	if err := d.AutoMigrate(); err != nil {
-		return fmt.Errorf("failed to auto migrate: %v", err)
-	}
-
 	log.Printf("Database connected successfully with pool configuration: (MaxIdleConns: %d, MaxOpenConns: %d, ConnMaxLifetime: %ds)",
 		cfg.MaxIdleConns, cfg.MaxOpenConns, cfg.ConnMaxLifetime)
 	return nil
-}
-
-// AutoMigrate 执行自动迁移
-func (d *Database) AutoMigrate() error {
-	if d.db == nil {
-		return fmt.Errorf("database not initialized")
-	}
-	if len(d.models) == 0 {
-		log.Println("No models to migrate")
-		return nil
-	}
-	return d.db.AutoMigrate(d.models...)
 }
 
 // DB 获取 gorm.DB 实例

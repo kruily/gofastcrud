@@ -22,7 +22,7 @@ func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	err := c.Repository.Create(ctx, &entity)
+	err := c.Repository.Create(ctx, entity)
 	if err != nil {
 		return nil, err
 	}
@@ -65,13 +65,13 @@ func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
 	opts := c.buildQueryOptions(ctx)
 
 	// 执行查询
-	items, err := c.Repository.Find(ctx, &c.entity, opts)
+	items, err := c.Repository.Find(ctx, c.entity, opts)
 	if err != nil {
 		return nil, err
 	}
 
 	// 获取总数
-	total, err := c.Repository.Count(ctx, &c.entity)
+	total, err := c.Repository.Count(ctx, c.entity)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 
 	entity.SetID(idInt)
 
-	if err := c.Repository.Update(ctx, &entity); err != nil {
+	if err := c.Repository.Update(ctx, entity); err != nil {
 		return nil, err
 	}
 

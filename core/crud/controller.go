@@ -11,6 +11,7 @@ import (
 	"github.com/kruily/gofastcrud/core/crud/module"
 	"github.com/kruily/gofastcrud/core/crud/options"
 	"github.com/kruily/gofastcrud/core/crud/types"
+	"github.com/kruily/gofastcrud/core/di"
 	"github.com/kruily/gofastcrud/errors"
 	"gorm.io/gorm"
 )
@@ -64,11 +65,13 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 		entityType = entityType.Elem()
 	}
 	entityName := entityType.Name()
-	// entityName = strings.ToLower(entityName[:1]) + entityName[1:]
-
+	container := di.SINGLE()
+	repo := NewRepository(db, entity)
+	responser := container.MustGetSingletonByName("RESPONSE_HANDLER").(module.ICrudResponse)
+	container.BindSingletonWithName(entity.Table(), repo)
 	c := &CrudController[T]{
-		Repository:  NewRepository(db, entity),
-		Responser:   module.GetCrudModule().GetService(module.ResponseService).(module.ICrudResponse),
+		Repository:  repo,
+		Responser:   responser,
 		entity:      entity,
 		entityName:  entityName, // 保存实体名称
 		middlewares: make(map[string][]gin.HandlerFunc),

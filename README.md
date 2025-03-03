@@ -22,7 +22,7 @@ GoFastCrud 是一个基于 Gin 框架的快速 CRUD 开发框架，帮助开发�
 ## 安装
 
 ```bash
-go get github.com/kruily/GoFastCrud
+go get github.com/kruily/gofastcrud
 ```
 
 ## 使用
@@ -45,65 +45,66 @@ database:
 ### 2. 启动服务
 ```go
 // main.go
-// 加载配置管理器
-configManager := module.CRUD_MODULE.GetService(module.ConfigService).(*config.ConfigManager)
-// 加载配置
-configManager.LoadConfig()
-// 获取配置
-cfg := configManager.GetConfig()
-// 创建数据库管理器
-db := database.New()
-if err := db.Init(cfg.Database); err != nil {
-    log.Fatalf("Failed to initialize database: %v", err)
-}
-// 创建服务实例
-srv := server.NewServer(cfg)
-// 发布路由
-srv.Publish("/api/v1")
 
-// 运行服务（包含优雅启停）
-if err := srv.Run(); err != nil {
-    log.Fatalf("Server error: %v", err)
+type User struct {
+    ...
+}
+
+func main() {    
+    // 创建应用实例
+    app := app.NewDefaultGoFastCrudApp()
+
+    // 发布API版本
+    app.PublishVersion(server.V1)
+
+    // 注册控制器
+    app.RegisterControllers(func(factory *crud.ControllerFactory, server *server.Server) {
+        crud.Register[*User](factory, "/users", server)
+    })
+
+    // 启动服务
+    app.Start()
 }
 ```
+启动服务，访问主页：`http://localhost:8080`
+![主页截图](./docs/images/home-face.png)
+
+现在用户各个接口均已自动注册到GIN ROUTER中,可以点击主页API Documentation查看Swagger文档或访问：`http://localhost:8080/api/v1/swagger/index.html`
+![文档截图](./docs/images/swagger-face.png)
 
 ### 3. 定义实体模型
+需要继承 `crud.BaseEntity` 并实现 `crud.ICrudEntity` 接口的 `Table` 方法
 ```go
-go
 // models/user.go
 type User struct {
     // 嵌入crud基础实体 
     crud.BaseEntity  `json:"-"` //不参与json序列化
-	ID        uint   `json:"id" gorm:"primarykey"`
 	Username  string `json:"username" binding:"required" description:"用户名"`
 	Email     string `json:"email" description:"邮箱地址"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// 定义表名 必须实现
 func (u User) Table() string {
 	return "users"
 }
 ```
 
-### 4. 创建控制器
+### 4. 控制器
 有两种方式创建控制器：
 
-#### 4.1 使用标准控制器
-这种方式会自动生成 CRUD 接口，并注册到路由中。
+#### 4.1 使用默认控制器
+只需传入实体模型
 ```go
-// 创建控制器工厂
-factory := crud.NewControllerFactory(db)
-// 注册标准控制器(srv为服务实例)
-crud.Register[*models.User](factory, "/users", srv)
+factory.Register(server, models.User{})
 ```
 
 #### 4.2 使用自定义控制器
-
+需要继承 `crud.CrudController` 并定义出创建控制器实例的方法
 ```go
 // controllers/user_controller.go
 type UserController struct {
-    // 嵌入 CrudController
-    *crud.CrudController[models.User]
+    // ***嵌入 CrudController***
+    *crud.CrudController[models.User] 
 }
 // 创建控制器实例
 func NewUserController(db *gorm.DB) *UserController {
@@ -131,73 +132,22 @@ func NewUserController(db *gorm.DB) *UserController {
     return controller
 }
 
-// 注册自定义控制器
-crud.RegisterCustomController[models.User](factory, "/users", srv, controllers.NewUserController)
-```
-
-### 5. 启用swagger
-```go
-// main.go
-srv.EnableSwagger()
-```
-
-### 6. 完整代码
-```go
-// main.go
-func main() {
-    // 加载配置
-    cfg := config.Load("config.yaml")
-
-    // 初始化数据库
-    db := database.NewDB()
-    
-    // 注册迁移模型
-    db.RegisterModels(
-        &models.User{},
-        &models.Book{},
-        // 添加其他模型
-    )
-
-    // 初始化数据库
-    if err := db.Init(cfg.Database); err != nil {
-        log.Fatalf("Failed to initialize database: %v", err)
-    }
-
-    // 创建服务实例
-    srv := server.NewServer()
-    srv.Publish("/api/v1")
-
-    // 创建控制器工厂
-    factory := crud.NewControllerFactory(db.DB())
-
-    // 注册标准控制器
-    crud.Register[*models.Book](factory, "/books", srv)
-
-    // 标准控制器应用中间件
-    c := crud.Register[*models.Phone](factory, "/phones", srv)
-    c.UseMiddleware("*", middleware.Auth())
-
-    // 注册自定义控制器
-    crud.RegisterCustomController[models.User](
-        factory,
-        "/users",
-        srv,
-        controllers.NewUserController,
-    )
-
-    // 启用 Swagger
-    srv.EnableSwagger()
-
-    // 运行服务
-    if err := srv.Run(); err != nil {
-        log.Fatalf("Server error: %v", err)
-    }
+// 自定义方法 返回值必须为(interface{}, error) 
+//interface{} 为返回数据 error 为错误信息
+// 无需关注Response 框架会自动处理
+func (c *UserController) Login(ctx *gin.Context)(interface{}, error) {
+    ...
 }
+
 ```
 
-## API 文档
+```go
+factory.RegisterCustom(server, controllers.NewUserController)
+```
 
-启动服务后访问 `/swagger` 查看自动生成的 API 文档。
+### 5. 完整示例
+[example](./example)
+
 
 ### 标准 CRUD 接口
 
@@ -206,13 +156,16 @@ func main() {
 - `GET /{entity}/{id}` - 获取单个实体
 - `POST /{entity}/{id}` - 更新实体
 - `DELETE /{entity}/{id}` - 删除实体
+- `POST /{entity}/batch` - 批量创建
+- `POST /{entity}/batch` - 批量更新
+- `DELETE /{entity}/batch` - 批量删除
 
 ## 高级特性
 
 ### 中间件支持
 
 ```go
-// 全局中间件
+// 控制器全局中间件，* 表示所有方法，POST 表示指定方法
 controller.UseMiddleware("*", middleware.Auth())
 
 // 方法特定中间件
@@ -221,9 +174,7 @@ controller.UseMiddleware("POST", middleware.Validate())
 
 ### 自定义响应处理
 ```go
-crud.SetConfig(&crud.CrudModule{
-    Responser: &CustomResponser{},
-})
+app := app.NewDefaultGoFastCrudApp(WithResponse(CustomResponser{}))
 ```
 `CustomResponser` 需要实现 `ICrudResponse` 接口
 ```go
@@ -231,21 +182,31 @@ crud.SetConfig(&crud.CrudModule{
 type ICrudResponse interface {
 	Success(data interface{}) interface{}
 	Error(err error) interface{}
-	List(items interface{}, total int64) interface{}
+	Pagenation(items interface{}, total int64, page int, size int) interface{}
 }
 ```
 
-### 分页配置
-
+### DI 支持
 ```go
-crud.SetConfig(&crud.CrudModule{
-    DefaultPageSize: 10,
-    MaxPageSize:     100,
-})
+# 获取DI
+di.SINGLE()
+
+# 注册依赖 单例
+di.BindSingletonWithName("SERVICE", &Service{})
+di.BindSingletonWithType(&Service{})
+
+# 获取依赖 单例
+di.GetSingletonByName("SERVICE")
+di.GetSingletonByType(&Service{})
 ```
 
-## 示例
-查看 `example/` 目录获取完整示例。
+### 获取Repository 单独使用
+```go
+// 获取Repository
+repo := di.GetSingletonByName(models.User{}.Table())
+```
+Repository 实现 [`ICrudRepository`](./core/crud/repository.go) 接口
+
 
 ## 贡献指南
 
