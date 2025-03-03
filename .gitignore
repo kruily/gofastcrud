@@ -62,7 +62,6 @@ debug.test
 # Generated files
 swagger.json
 swagger.yaml
-docs/
 dist/
 
 # Air live reload
