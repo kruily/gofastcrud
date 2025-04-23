@@ -14,7 +14,7 @@ type ID_TYPE interface {
 // ICrudEntity CRUD 实体接口
 type ICrudEntity interface {
 	// Table 获取表名
-	Table() string
+	TableName() string
 	// SetID 设置ID
 	SetID(id any) error
 	// GetID 获取ID
@@ -29,12 +29,12 @@ type BaseEntity struct {
 }
 
 // GetID 获取ID
-func (e *BaseEntity) GetID() any {
+func (e BaseEntity) GetID() any {
 	return e.ID
 }
 
 // SetID 设置ID
-func (e *BaseEntity) SetID(id any) error {
+func (e BaseEntity) SetID(id any) error {
 	if idInt, ok := id.(uint64); ok {
 		e.ID = idInt
 	} else {

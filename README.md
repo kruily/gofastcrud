@@ -59,7 +59,7 @@ func main() {
 
     // 注册控制器
     app.RegisterControllers(func(factory *crud.ControllerFactory, server *server.Server) {
-        crud.Register[*User](factory, "/users", server)
+       factory.Register(server, User{})
     })
 
     // 启动服务
@@ -84,7 +84,7 @@ type User struct {
 }
 
 // 定义表名 必须实现
-func (u User) Table() string {
+func (u User) TableName() string {
 	return "users"
 }
 ```

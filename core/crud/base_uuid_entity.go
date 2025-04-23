@@ -9,7 +9,7 @@ import (
 )
 
 type BaseUUIDEntity struct {
-	ID        uuid.UUID `gorm:"type:uuid;primarykey;" json:"id" example:"1" description:"唯一标识符"`
+	ID        uuid.UUID `gorm:"type:string;primarykey;" json:"id" example:"1" description:"唯一标识符"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at" example:"2024-03-20T10:00:00Z" description:"创建时间"`
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at" example:"2024-03-20T10:00:00Z" description:"更新时间"`
 }

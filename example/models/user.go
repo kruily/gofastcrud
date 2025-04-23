@@ -12,6 +12,6 @@ type User struct {
 	Email    string `json:"email" binding:"required" gorm:"unique;"`
 }
 
-func (User) Table() string {
+func (User) TableName() string {
 	return "users"
 }

@@ -25,7 +25,7 @@ func NewControllerFactory(db *gorm.DB) *ControllerFactory {
 func (f *ControllerFactory) Register(server types.RegisterServer, model ICrudEntity) ICrudController[ICrudEntity] {
 	f.models = append(f.models, model)
 	controller := NewCrudController(f.db, model)
-	server.RegisterCrudController(model.Table(), controller, reflect.TypeOf(model))
+	server.RegisterCrudController(model.TableName(), controller, reflect.TypeOf(model))
 	return controller
 }
 
@@ -37,7 +37,7 @@ func (f *ControllerFactory) Register(server types.RegisterServer, model ICrudEnt
 func (f *ControllerFactory) RegisterCustom(server types.RegisterServer, constructor func(*gorm.DB) ICrudController[ICrudEntity]) ICrudController[ICrudEntity] {
 	controller := constructor(f.db)
 	f.models = append(f.models, controller.GetEntity())
-	server.RegisterCrudController(controller.GetEntity().Table(), controller, reflect.TypeOf(controller.GetEntity()))
+	server.RegisterCrudController(controller.GetEntity().TableName(), controller, reflect.TypeOf(controller.GetEntity()))
 	return controller
 }
 
@@ -49,14 +49,14 @@ func (f *ControllerFactory) RegisterCustom(server types.RegisterServer, construc
 func (f *ControllerFactory) RegisterWithFather(server types.RegisterServer, father ICrudController[ICrudEntity], model ICrudEntity) ICrudController[ICrudEntity] {
 	f.models = append(f.models, model)
 	controller := NewCrudController(f.db, model)
-	server.RegisterCrudControllerWithFather(father, model.Table(), controller, reflect.TypeOf(model))
+	server.RegisterCrudControllerWithFather(father, model.TableName(), controller, reflect.TypeOf(model))
 	return controller
 }
 
 func (f *ControllerFactory) RegisterWithFatherCustom(server types.RegisterServer, father ICrudController[ICrudEntity], constructor func(*gorm.DB) ICrudController[ICrudEntity]) ICrudController[ICrudEntity] {
 	controller := constructor(f.db)
 	f.models = append(f.models, controller.GetEntity())
-	server.RegisterCrudControllerWithFather(father, controller.GetEntity().Table(), controller, reflect.TypeOf(controller.GetEntity()))
+	server.RegisterCrudControllerWithFather(father, controller.GetEntity().TableName(), controller, reflect.TypeOf(controller.GetEntity()))
 	return controller
 }
 
@@ -67,7 +67,7 @@ func (f *ControllerFactory) RegisterWithFatherCustom(server types.RegisterServer
 func (f *ControllerFactory) RegisterBatch(server types.RegisterServer, models ...ICrudEntity) {
 	for _, model := range models {
 		f.models = append(f.models, model)
-		server.RegisterCrudController(model.Table(), NewCrudController(f.db, model), reflect.TypeOf(model))
+		server.RegisterCrudController(model.TableName(), NewCrudController(f.db, model), reflect.TypeOf(model))
 	}
 }
 
@@ -79,7 +79,7 @@ func (f *ControllerFactory) RegisterBatchCustom(server types.RegisterServer, con
 	for _, constructor := range controllerConstructor {
 		controller := constructor(f.db)
 		f.models = append(f.models, controller.GetEntity())
-		server.RegisterCrudController(controller.GetEntity().Table(), controller, reflect.TypeOf(controller.GetEntity()))
+		server.RegisterCrudController(controller.GetEntity().TableName(), controller, reflect.TypeOf(controller.GetEntity()))
 	}
 }
 

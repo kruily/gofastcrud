@@ -11,6 +11,6 @@ type Category struct {
 	Books []Book `json:"books" gorm:"foreignKey:CategoryID;references:ID"`
 }
 
-func (Category) Table() string {
+func (Category) TableName() string {
 	return "categories"
 }
