@@ -7,6 +7,7 @@ import (
 	"github.com/kruily/gofastcrud/core/app"
 	"github.com/kruily/gofastcrud/core/crud"
 	"github.com/kruily/gofastcrud/core/server"
+	"github.com/kruily/gofastcrud/example/controllers"
 	"github.com/kruily/gofastcrud/utils"
 )
 
@@ -42,7 +43,7 @@ func main() {
 		// factory.RegisterBatch(server, &models.User{}, &models.Book{}, &models.Category{})
 
 		// 使用批量注册自定义控制器
-		// factory.RegisterBatchCustom(server, controllers.NewUserController, controllers.NewBookController)
+		factory.RegisterBatchCustom(server, controllers.NewUserController, controllers.NewBookController)
 
 		// 自定义路由名称（批量）
 		// factory.RegisterBatchMap(server, map[string]crud.ICrudEntity{

@@ -9,18 +9,18 @@ import (
 )
 
 type BaseUUIDEntity struct {
-	ID        uuid.UUID `gorm:"primarykey" json:"id" example:"1" description:"唯一标识符"`
+	ID        uuid.UUID `gorm:"type:uuid;primarykey;" json:"id" example:"1" description:"唯一标识符"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at" example:"2024-03-20T10:00:00Z" description:"创建时间"`
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at" example:"2024-03-20T10:00:00Z" description:"更新时间"`
 }
 
 // GetID 获取ID
-func (e *BaseUUIDEntity) GetID() any {
+func (e BaseUUIDEntity) GetID() any {
 	return e.ID
 }
 
 // SetID 设置ID
-func (e *BaseUUIDEntity) SetID(id any) error {
+func (e BaseUUIDEntity) SetID(id any) error {
 	if idUUID, ok := id.(uuid.UUID); ok {
 		e.ID = idUUID
 	} else {
@@ -29,10 +29,7 @@ func (e *BaseUUIDEntity) SetID(id any) error {
 	return nil
 }
 
-func (e *BaseUUIDEntity) BeforeCreate(tx *gorm.DB) error {
-	if e == nil {
-		e = &BaseUUIDEntity{}
-	}
+func (e *BaseUUIDEntity) BeforeCreate(tx *gorm.DB) (err error) {
 	e.ID = uuid.New()
 	return nil
 }

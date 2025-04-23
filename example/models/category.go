@@ -6,7 +6,7 @@ import (
 
 // Category 分类模型
 type Category struct {
-	*crud.BaseUUIDEntity
+	crud.BaseUUIDEntity
 	Name  string `json:"name" binding:"required" gorm:"unique"`
 	Books []Book `json:"books" gorm:"foreignKey:CategoryID;references:ID"`
 }

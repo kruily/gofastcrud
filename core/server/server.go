@@ -25,7 +25,6 @@ type Server struct {
 	router         *gin.Engine
 	srv            *http.Server
 	swaggerGen     *swagger.Generator
-	enableSwagger  bool
 	versionManager *VersionManager
 	apiGroups      map[types.APIVersion]*gin.RouterGroup
 }
@@ -48,7 +47,6 @@ func NewServer(cfg *config.Config) *Server {
 		router:         r,
 		srv:            srv,
 		swaggerGen:     swagger.NewGenerator(),
-		enableSwagger:  cfg.Server.EnableSwagger,
 		versionManager: NewVersionManager(),
 		apiGroups:      make(map[types.APIVersion]*gin.RouterGroup),
 	}
@@ -74,9 +72,7 @@ func (s *Server) RegisterRoutes(register types.RouteRegister) {
 // Run 启动服务并处理优雅关闭
 func (s *Server) Run() error {
 	// 启用 Swagger 文档
-	if s.enableSwagger {
-		s.EnableSwagger()
-	}
+	s.EnableSwagger()
 
 	// 获取所有可用的API版本
 	versions := s.versionManager.GetAvailableVersions()
@@ -148,9 +144,7 @@ func (s *Server) RegisterCrudController(path string, controller interface{}, ent
 			c.RegisterRoutes()
 
 			// 生成对应版本的文档
-			if s.enableSwagger {
-				s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
-			}
+			s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
 		}
 	}
 }
@@ -167,11 +161,9 @@ func (s *Server) RegisterCrudControllerWithFather(father any, path string, contr
 		c.RegisterRoutes()
 		version := s.versionManager.ParseVersionFromPath(g.BasePath())
 		// 生成对应版本的文档
-		if s.enableSwagger {
-			routePath = strings.TrimPrefix(g.BasePath(), "/api/"+string(version))
-			routePath = strings.TrimPrefix(routePath, "/")
-			s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
-		}
+		routePath = strings.TrimPrefix(g.BasePath(), "/api/"+string(version))
+		routePath = strings.TrimPrefix(routePath, "/")
+		s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
 	}
 
 }

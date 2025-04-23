@@ -9,7 +9,6 @@ server:
   port: 8080
   read_timeout: 60
   write_timeout: 60
-  enable_swagger: true
 
 database:
   driver: "mysql"

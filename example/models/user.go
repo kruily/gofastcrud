@@ -7,7 +7,7 @@ import (
 // User 用户模型
 // @Description 用户信息
 type User struct {
-	*crud.BaseUUIDEntity
+	crud.BaseUUIDEntity
 	Username string `json:"username" binding:"required"`
 	Email    string `json:"email" binding:"required" gorm:"unique;"`
 }

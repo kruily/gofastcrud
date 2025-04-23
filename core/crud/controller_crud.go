@@ -2,9 +2,11 @@ package crud
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/kruily/gofastcrud/config"
 	"github.com/kruily/gofastcrud/core/crud/options"
 	"github.com/kruily/gofastcrud/errors"
 	"github.com/kruily/gofastcrud/validator"
@@ -203,4 +205,117 @@ func (c *CrudController[T]) BatchDelete(ctx *gin.Context) (interface{}, error) {
 	}
 
 	return c.Responser.Success(nil), nil
+}
+
+// buildQueryOptions 构建查询选项
+func (c *CrudController[T]) buildQueryOptions(ctx *gin.Context) *options.QueryOptions {
+	// 获取基础分页参数
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", strconv.Itoa(config.CONFIG_MANAGER.GetConfig().Pagenation.DefaultPageSize)))
+
+	// 限制页面大小
+	if pageSize > config.CONFIG_MANAGER.GetConfig().Pagenation.MaxPageSize {
+		pageSize = config.CONFIG_MANAGER.GetConfig().Pagenation.MaxPageSize
+	}
+
+	// 构建查询选项
+	opts := options.NewQueryOptions(
+		options.WithPage(page),
+		options.WithPageSize(pageSize),
+		options.WithOrderBy(ctx.DefaultQuery("order_by", "id desc")),
+	)
+
+	// 处理搜索
+	if search := ctx.Query("search"); search != "" {
+		opts.Search = search
+		opts.SearchFields = strings.Split(ctx.DefaultQuery("search_fields", "id"), ",")
+	}
+
+	// 处理过滤条件
+	c.buildFilterOptions(ctx, opts)
+
+	// 处理预加载关系
+	if preload := ctx.Query("preload"); preload != "" {
+		opts.Preload = strings.Split(preload, ",")
+	}
+
+	// 处理字段选择
+	if fields := ctx.Query("fields"); fields != "" {
+		opts.Select = strings.Split(fields, ",")
+	}
+
+	return opts
+}
+
+// buildFilterOptions 构建过滤选项
+func (c *CrudController[T]) buildFilterOptions(ctx *gin.Context, opts *options.QueryOptions) {
+	querys := ctx.Request.URL.Query()
+	for key, values := range querys {
+		// 跳过特殊参数
+		if isSpecialParam(key) {
+			continue
+		}
+		// 处理范围查询
+		if strings.HasSuffix(key, "_gt") || strings.HasSuffix(key, "_lt") ||
+			strings.HasSuffix(key, "_gte") || strings.HasSuffix(key, "_lte") {
+			field := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(
+				strings.TrimSuffix(key, "_gt"), "_lt"), "_gte"), "_lte")
+
+			if strings.HasSuffix(key, "_gt") {
+				opts.Where[field+" > ?"] = values[0]
+			} else if strings.HasSuffix(key, "_lt") {
+				opts.Where[field+" < ?"] = values[0]
+			} else if strings.HasSuffix(key, "_gte") {
+				opts.Where[field+" >= ?"] = values[0]
+			} else if strings.HasSuffix(key, "_lte") {
+				opts.Where[field+" <= ?"] = values[0]
+			}
+			continue
+		}
+
+		// 处理IN查询
+		if strings.HasSuffix(key, "_in") {
+			field := strings.TrimSuffix(key, "_in")
+			opts.Where[field+" IN ?"] = strings.Split(values[0], ",")
+			continue
+		}
+
+		// 处理NULL查询
+		if strings.HasSuffix(key, "_null") {
+			field := strings.TrimSuffix(key, "_null")
+			if values[0] == "true" {
+				opts.Where[field+" IS NULL"] = nil
+			} else {
+				opts.Where[field+" IS NOT NULL"] = nil
+			}
+			continue
+		}
+
+		// 处理模糊查询
+		if strings.HasSuffix(key, "_like") {
+			field := strings.TrimSuffix(key, "_like")
+			opts.Where[field+" LIKE ?"] = "%" + values[0] + "%"
+			continue
+		}
+
+		// 处理普通相等查询
+		if !isSpecialParam(key) {
+			opts.Filter[key] = values[0]
+		}
+	}
+}
+
+// isSpecialParam 检查是否为特殊参数
+func isSpecialParam(key string) bool {
+	specialParams := []string{
+		"page", "page_size", "order_by",
+		"search", "search_fields", "preload",
+		"fields",
+	}
+	for _, param := range specialParams {
+		if key == param {
+			return true
+		}
+	}
+	return false
 }

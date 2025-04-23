@@ -6,7 +6,7 @@ import (
 
 // Book 书籍模型
 type Book struct {
-	*crud.BaseUUIDEntity
+	crud.BaseUUIDEntity
 	Title      string    `json:"title" binding:"required"`
 	CategoryID string    `json:"category_id" gorm:"type:text;index:idx_category_id(255)"`
 	Category   *Category `json:"category" gorm:"foreignKey:CategoryID;references:ID"`

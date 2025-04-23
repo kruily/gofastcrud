@@ -19,11 +19,10 @@ type AppConfig struct {
 }
 
 type ServerConfig struct {
-	Address       string `mapstructure:"address"`
-	Port          int    `mapstructure:"port"`
-	ReadTimeout   int    `mapstructure:"read_timeout"`
-	WriteTimeout  int    `mapstructure:"write_timeout"`
-	EnableSwagger bool   `mapstructure:"enable_swagger"`
+	Address      string `mapstructure:"address"`
+	Port         int    `mapstructure:"port"`
+	ReadTimeout  int    `mapstructure:"read_timeout"`
+	WriteTimeout int    `mapstructure:"write_timeout"`
 }
 
 type LogConfig struct {

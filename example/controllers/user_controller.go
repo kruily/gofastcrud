@@ -27,14 +27,16 @@ type UserController struct {
 
 func NewUserController(db *gorm.DB) crud.ICrudController[crud.ICrudEntity] {
 	controller := &UserController{
-		CrudController: crud.NewCrudController[models.User](db, models.User{}),
+		CrudController: crud.NewCrudController(db, models.User{}),
 	}
 	controller.AddRoute(types.APIRoute{
-		Method:  http.MethodPost,
-		Path:    "/register",
-		Summary: "注册用户",
-		Tags:    []string{controller.GetEntityName()},
-		Handler: controller.Create,
+		Method:   http.MethodPost,
+		Path:     "/register",
+		Summary:  "注册用户",
+		Tags:     []string{controller.GetEntityName()},
+		Handler:  controller.Create,
+		Request:  &CreateRequest{},
+		Response: &models.User{},
 	})
 	return controller
 }
