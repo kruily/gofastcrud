@@ -14,9 +14,9 @@ import (
 // IRepository 仓储接口
 type IRepository[T ICrudEntity] interface {
 	// 基础操作
-	Create(ctx context.Context, entity T) error
-	Update(ctx context.Context, entity T) error
-	Delete(ctx context.Context, entity T, opts ...*options.DeleteOptions) error
+	Create(ctx context.Context, entity *T) error
+	Update(ctx context.Context, entity *T) error
+	Delete(ctx context.Context, entity *T, opts ...*options.DeleteOptions) error
 	DeleteById(ctx context.Context, id any, opts ...*options.DeleteOptions) error
 	FindById(ctx context.Context, id any) (*T, error)
 	Find(ctx context.Context, entity T, opts *options.QueryOptions) ([]T, error)
@@ -176,8 +176,8 @@ func (r *Repository[T]) FindById(ctx context.Context, id any) (*T, error) {
 }
 
 // 实现所有接口方法...
-func (r *Repository[T]) Create(ctx context.Context, entity T) error {
-	return r.db.WithContext(ctx).Create(&entity).Error
+func (r *Repository[T]) Create(ctx context.Context, entity *T) error {
+	return r.db.WithContext(ctx).Create(entity).Error
 }
 
 // BatchCreate 批量创建
@@ -294,7 +294,7 @@ func (r *Repository[T]) CountField(ctx context.Context, field string) (int64, er
 }
 
 // Delete 删除实体
-func (r *Repository[T]) Delete(ctx context.Context, entity T, opts ...*options.DeleteOptions) error {
+func (r *Repository[T]) Delete(ctx context.Context, entity *T, opts ...*options.DeleteOptions) error {
 	if len(opts) > 0 {
 		if opts[0].Force {
 			return r.db.WithContext(ctx).Unscoped().Delete(&entity).Error
@@ -306,7 +306,7 @@ func (r *Repository[T]) Delete(ctx context.Context, entity T, opts ...*options.D
 			r.db = r.db.Set("deleted_by", opts[0].DeletedBy)
 		}
 	}
-	return r.db.WithContext(ctx).Delete(&entity).Error
+	return r.db.WithContext(ctx).Delete(entity).Error
 }
 
 // DeleteById 根据ID删除
@@ -315,7 +315,7 @@ func (r *Repository[T]) DeleteById(ctx context.Context, id any, opts ...*options
 	if err := entity.SetID(id); err != nil {
 		return err
 	}
-	return r.Delete(ctx, entity, opts...)
+	return r.Delete(ctx, &entity, opts...)
 }
 
 // 链式查询方法
@@ -355,6 +355,6 @@ func (r *Repository[T]) Having(query interface{}, args ...interface{}) IReposito
 }
 
 // Update 更新实体
-func (r *Repository[T]) Update(ctx context.Context, entity T) error {
-	return r.db.WithContext(ctx).Save(&entity).Error
+func (r *Repository[T]) Update(ctx context.Context, entity *T) error {
+	return r.db.WithContext(ctx).Save(entity).Error
 }

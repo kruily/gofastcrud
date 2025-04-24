@@ -1,5 +1,7 @@
 package utils
 
+import "github.com/kruily/gofastcrud/errors"
+
 // Response 基础响应结构
 type Response struct {
 	Code    int         `json:"code"`
@@ -21,7 +23,7 @@ type DefaultResponseHandler struct{}
 // Success 处理成功响应
 func (h *DefaultResponseHandler) Success(data interface{}) interface{} {
 	return Response{
-		Code:    200,
+		Code:    0,
 		Message: "success",
 		Data:    data,
 	}
@@ -29,8 +31,12 @@ func (h *DefaultResponseHandler) Success(data interface{}) interface{} {
 
 // Error 处理错误响应
 func (h *DefaultResponseHandler) Error(err error) interface{} {
+	code := 500
+	if appErr, ok := err.(*errors.AppError); ok {
+		code = int(appErr.Code)
+	}
 	return Response{
-		Code:    500,
+		Code:    code,
 		Message: err.Error(),
 		Data:    nil,
 	}
@@ -39,7 +45,7 @@ func (h *DefaultResponseHandler) Error(err error) interface{} {
 // Pagenation 处理列表响应
 func (h *DefaultResponseHandler) Pagenation(items interface{}, total int64, page int, size int) interface{} {
 	return Response{
-		Code:    200,
+		Code:    0,
 		Message: "success",
 		Data: PagenationResponse{
 			List:  items,

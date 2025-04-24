@@ -31,8 +31,6 @@ func main() {
 
 	app.PublishVersion(server.V1)
 
-	// app.RegisterModels(&models.User{}, &models.Book{}, &models.Category{})
-
 	app.RegisterControllers(func(factory *crud.ControllerFactory, server *server.Server) {
 		// 注册默认控制器
 		// factory.Register(server, models.User{})

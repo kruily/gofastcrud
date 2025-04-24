@@ -44,21 +44,11 @@ func NewUserController(db *gorm.DB) crud.ICrudController[crud.ICrudEntity] {
 func (c *UserController) Create(ctx *gin.Context) (interface{}, error) {
 	var request CreateRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "Invalid request parameters",
-			"error":   err.Error(),
-		})
 		return nil, err
 	}
 
 	if err := validate.Struct(request); err != nil {
 		if _, ok := err.(*validator.InvalidValidationError); ok {
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"code":    500,
-				"message": "Internal validation error",
-				"error":   err.Error(),
-			})
 			return nil, err
 		}
 
@@ -66,11 +56,6 @@ func (c *UserController) Create(ctx *gin.Context) (interface{}, error) {
 		for _, err := range err.(validator.ValidationErrors) {
 			errors = append(errors, err.Error())
 		}
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "Validation failed",
-			"errors":  errors,
-		})
 		return nil, err
 	}
 

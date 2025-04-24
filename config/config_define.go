@@ -57,9 +57,9 @@ type RedisConfig struct {
 }
 
 type JWTConfig struct {
-	SecretKey   string `mapstructure:"secret_key"`
-	ExpireHours int    `mapstructure:"expire_hours"`
-	Issuer      string `mapstructure:"issuer"`
+	SecretKey string `mapstructure:"secret_key"`
+	Expire    string `mapstructure:"expire"`
+	Issuer    string `mapstructure:"issuer"`
 }
 
 type PagenationConfig struct {

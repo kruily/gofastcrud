@@ -42,10 +42,10 @@ func (m *AuthMiddleware) JWT() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
-
+		cla := claims.(*fast_jwt.Claims) // TODO: 需要根据实际情况修改Claims类型
 		// 将用户信息存储到上下文中
-		c.Set("user_id", claims.UserID)
-		c.Set("username", claims.Username)
+		c.Set("user_id", cla.UserID)
+		c.Set("username", cla.Username)
 
 		c.Next()
 	}

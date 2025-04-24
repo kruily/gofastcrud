@@ -9,6 +9,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config 初始化
+func init() {
+	NewConfigManager()
+	CONFIG_MANAGER.LoadConfig()
+}
+
 var CONFIG_MANAGER *ConfigManager
 
 // ConfigManager 配置管理器

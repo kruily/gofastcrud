@@ -63,7 +63,7 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 	entityName := entityType.Name()
 	container := di.SINGLE()
 	repo := NewRepository(db, entity)
-	responser := container.MustGetSingletonByName("RESPONSE_HANDLER").(module.ICrudResponse)
+	responser := container.MustGetSingletonByName(module.ResponseService).(module.ICrudResponse)
 	container.BindSingletonWithName(entity.TableName(), repo)
 	c := &CrudController[T]{
 		Repository:  repo,

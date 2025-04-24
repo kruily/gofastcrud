@@ -7,6 +7,7 @@ import (
 // Options 应用选项
 type AppOption struct {
 	Response module.ICrudResponse
+	Jwt      module.IJwt
 }
 
 // Option 应用选项
@@ -16,5 +17,12 @@ type Option func(*AppOption)
 func WithResponse(response module.ICrudResponse) Option {
 	return func(o *AppOption) {
 		o.Response = response
+	}
+}
+
+// WithJwt 设置jwt处理
+func WithJwt(jwt module.IJwt) Option {
+	return func(o *AppOption) {
+		o.Jwt = jwt
 	}
 }
