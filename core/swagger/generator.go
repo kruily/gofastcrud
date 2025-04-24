@@ -402,7 +402,7 @@ func (g *Generator) generateOperation(route types.APIRoute, entityName string) *
 				Description: "Entity ID",
 				Required:    true,
 			},
-			SimpleSchema: spec.SimpleSchema{Type: "integer"},
+			SimpleSchema: spec.SimpleSchema{Type: route.PathType}, // 根据实际类型设置正确的类型
 		})
 	}
 

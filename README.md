@@ -117,7 +117,7 @@ func NewUserController(db *gorm.DB) *UserController {
     controller.UseMiddleware("POST", middleware.Validate())
 
     // 添加自定义路由
-    controller.AddRoute(crud.APIRoute{
+    controller.AddRoute(types.APIRoute{
         Path:        "/login",
         Method:      "POST",
         // swagger 信息
@@ -129,6 +129,20 @@ func NewUserController(db *gorm.DB) *UserController {
         // 只对当前路由应用中间件（可选）
         Middleware:  []gin.HandlerFunc{middleware.Auth()},
     })
+
+    // 或者
+    controller.AddRoutes([]types.APIRoute{
+        // 链式写法
+        types.Post("/register", controller.Registor).  // Post、Get、Put、Delete 等方法
+			WithSummary("注册用户"). // swagger 标题 信息
+			WithDescription("注册用户"). // swagger 简介 信息
+			WithTags([]string{controller.GetEntityName()}). // swagger tags 信息
+			WithRequest(&UserRegister{}).  // 请求参数类型
+			WithResponse(&Userinfo{}).  // 返回参数类型
+			WithMiddlewares(),  // 中间件 信息
+        ...
+    })
+
     return controller
 }
 
@@ -153,7 +167,7 @@ factory.RegisterCustom(server, controllers.NewUserController)
 
 - `GET /{entity}` - 获取列表
 - `POST /{entity}` - 创建实体
-- `GET /{entity}/{id}` - 获取单个实体
+- `GET /{entity}/:id` - 获取单个实体
 - `POST /{entity}/{id}` - 更新实体
 - `DELETE /{entity}/{id}` - 删除实体
 - `POST /{entity}/batch` - 批量创建
@@ -170,6 +184,14 @@ controller.UseMiddleware("*", middleware.Auth())
 
 // 方法特定中间件
 controller.UseMiddleware("POST", middleware.Validate())
+
+// 自定义方法应用中间件
+controller.AddRoute(types.APIRoute{
+    Path:        "/login",
+    Method:      "POST",
+    ...
+    Middleware:  []gin.HandlerFunc{middleware.Check()},
+})
 ```
 
 ### 自定义响应处理

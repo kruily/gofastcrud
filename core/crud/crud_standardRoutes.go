@@ -4,16 +4,22 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/kruily/gofastcrud/core/crud/types"
 )
 
 // standardRoutes 标准路由
 func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.APIRoute {
 	entityName := strings.ToLower(c.entityName[:1]) + c.entityName[1:]
+	idType := "integer"
+	if _, ok := c.entity.GetID().(*uuid.UUID); ok {
+		idType = "string"
+	}
 	return []types.APIRoute{
 		{
 			Path:        "/:" + entityName + "_id",
 			Method:      "GET",
+			PathType:    idType,
 			Tags:        []string{c.entityName},
 			Summary:     fmt.Sprintf("Get %s by ID", entityName),
 			Description: fmt.Sprintf("Get a single %s by its ID", entityName),

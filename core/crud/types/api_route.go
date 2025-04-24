@@ -33,12 +33,13 @@ type Cache struct {
 
 // APIRoute API 路由注解
 type APIRoute struct {
+	PathType    string            `doc:"id_type"`     // ID类型,携带路径参数类型的api路由使用,如'/users/:user_id
 	Path        string            `doc:"path"`        // 路径
 	Method      string            `doc:"method"`      // HTTP 方法
 	Tags        []string          `doc:"tags"`        // 标签分组
 	Summary     string            `doc:"summary"`     // 摘要
 	Description string            `doc:"description"` // 描述
-	Parameters  []Parameter       `doc:"parameters"`  // 参数
+	Parameters  []Parameter       `doc:"parameters"`  // 参数,现用于自动生成的filter条件
 	Request     interface{}       `doc:"request"`     // 请求结构体
 	Response    interface{}       `doc:"response"`    // 响应结构体
 	Handler     HandlerFunc       `doc:"handler"`     // 处理函数
