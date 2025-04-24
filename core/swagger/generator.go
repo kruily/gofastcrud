@@ -47,15 +47,15 @@ func (g *Generator) RegisterEntityWithVersion(entityType reflect.Type, basePath 
 	routeGroups := make(map[string][]types.APIRoute)
 	for _, route := range allRoutes {
 		path := fmt.Sprintf("/%s%s", routePath, route.Path)
-		re := regexp.MustCompile(`:\w+_id`)
-		query := re.FindAllString(path, -1)
-		for _, q := range query {
-			if q != "" {
-				rps := strings.TrimPrefix(q, ":")
-				rps = "{" + rps + "}"
-				path = strings.Replace(path, q, rps, 1)
-			}
-		}
+		// re := regexp.MustCompile(`:\w+_id`)
+		// query := re.FindAllString(path, -1)
+		// for _, q := range query {
+		// 	if q != "" {
+		// 		rps := strings.TrimPrefix(q, ":")
+		// 		rps = "{" + rps + "}"
+		// 		path = strings.Replace(path, q, rps, 1)
+		// 	}
+		// }
 		routeGroups[path] = append(routeGroups[path], route)
 	}
 

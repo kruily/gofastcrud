@@ -34,7 +34,8 @@ func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
 
 // GetById 根据ID获取实体
 func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
-	id := ctx.Param(c.entityName + "_id")
+	// TODO 仍旧获取不到正确的ID
+	id := ctx.Param(strings.ToLower(c.entityName) + "_id")
 	if id == "" {
 		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
 	}

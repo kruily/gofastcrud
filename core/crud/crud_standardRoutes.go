@@ -12,7 +12,7 @@ import (
 func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.APIRoute {
 	entityName := strings.ToLower(c.entityName[:1]) + c.entityName[1:]
 	idType := "integer"
-	if _, ok := c.entity.GetID().(*uuid.UUID); ok {
+	if _, ok := c.entity.GetID().(uuid.UUID); ok {
 		idType = "string"
 	}
 	return []types.APIRoute{
