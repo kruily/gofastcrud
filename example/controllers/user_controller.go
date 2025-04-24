@@ -22,12 +22,12 @@ type CreateRequest struct {
 }
 
 type UserController struct {
-	*crud.CrudController[models.User]
+	*crud.CrudController[*models.User]
 }
 
 func NewUserController(db *gorm.DB) crud.ICrudController[crud.ICrudEntity] {
 	controller := &UserController{
-		CrudController: crud.NewCrudController(db, models.User{}),
+		CrudController: crud.NewCrudController(db, &models.User{}),
 	}
 	controller.AddRoute(types.APIRoute{
 		Method:   http.MethodPost,
@@ -60,5 +60,6 @@ func (c *UserController) Create(ctx *gin.Context) (interface{}, error) {
 	}
 
 	// 在这里处理创建用户的逻辑
+
 	return nil, nil
 }

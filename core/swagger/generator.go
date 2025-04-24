@@ -47,15 +47,15 @@ func (g *Generator) RegisterEntityWithVersion(entityType reflect.Type, basePath 
 	routeGroups := make(map[string][]types.APIRoute)
 	for _, route := range allRoutes {
 		path := fmt.Sprintf("/%s%s", routePath, route.Path)
-		// re := regexp.MustCompile(`:\w+_id`)
-		// query := re.FindAllString(path, -1)
-		// for _, q := range query {
-		// 	if q != "" {
-		// 		rps := strings.TrimPrefix(q, ":")
-		// 		rps = "{" + rps + "}"
-		// 		path = strings.Replace(path, q, rps, 1)
-		// 	}
-		// }
+		re := regexp.MustCompile(`:\w+_id`)
+		query := re.FindAllString(path, -1)
+		for _, q := range query {
+			if q != "" {
+				rps := strings.TrimPrefix(q, ":")
+				rps = "{" + rps + "}"
+				path = strings.Replace(path, q, rps, 1)
+			}
+		}
 		routeGroups[path] = append(routeGroups[path], route)
 	}
 
@@ -395,9 +395,10 @@ func (g *Generator) generateOperation(route types.APIRoute, entityName string) *
 
 	// 处理路径参数
 	if re.MatchString(route.Path) {
+		name := strings.Replace(route.Path, "/:", "", 1)
 		operation.Parameters = append(operation.Parameters, spec.Parameter{
 			ParamProps: spec.ParamProps{
-				Name:        re.FindString(route.Path),
+				Name:        name,
 				In:          "path",
 				Description: "Entity ID",
 				Required:    true,

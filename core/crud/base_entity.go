@@ -1,6 +1,7 @@
 package crud
 
 import (
+	"reflect"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +20,23 @@ type ICrudEntity interface {
 	SetID(id any) error
 	// GetID 获取ID
 	GetID() any
+	// Init方法
+	Init()
+}
+
+// 泛型函数：创建并初始化 T 的实例
+func NewModel[T ICrudEntity]() T {
+	var t T
+	// 获取 T 的类型信息
+	typ := reflect.TypeOf(t)
+	// 必须是指针类型（如 *People）
+	if typ.Kind() != reflect.Ptr {
+		panic("T must be a pointer type")
+	}
+	// 创建新实例（例如 &People{}）
+	instance := reflect.New(typ.Elem()).Interface().(T)
+	instance.Init() // 调用初始化方法
+	return instance
 }
 
 // BaseEntity 基础实体
@@ -29,12 +47,12 @@ type BaseEntity struct {
 }
 
 // GetID 获取ID
-func (e BaseEntity) GetID() any {
+func (e *BaseEntity) GetID() any {
 	return e.ID
 }
 
 // SetID 设置ID
-func (e BaseEntity) SetID(id any) error {
+func (e *BaseEntity) SetID(id any) error {
 	if idInt, ok := id.(uint64); ok {
 		e.ID = idInt
 	} else {

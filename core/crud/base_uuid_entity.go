@@ -15,12 +15,15 @@ type BaseUUIDEntity struct {
 }
 
 // GetID 获取ID
-func (e BaseUUIDEntity) GetID() any {
+func (e *BaseUUIDEntity) GetID() any {
+	if e == nil {
+		e = &BaseUUIDEntity{}
+	}
 	return e.ID
 }
 
 // SetID 设置ID
-func (e BaseUUIDEntity) SetID(id any) error {
+func (e *BaseUUIDEntity) SetID(id any) error {
 	if idUUID, ok := id.(uuid.UUID); ok {
 		e.ID = idUUID
 	} else {

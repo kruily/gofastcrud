@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/kruily/gofastcrud/config"
 	"github.com/kruily/gofastcrud/core/app"
 	"github.com/kruily/gofastcrud/core/crud"
 	"github.com/kruily/gofastcrud/core/server"
@@ -23,6 +24,7 @@ func init() {
 	}
 	// 加载环境变量
 	utils.LoadEnv(projectRoot)
+	config.CONFIG_MANAGER.LoadConfig()
 }
 
 func main() {

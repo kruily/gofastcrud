@@ -51,6 +51,7 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 		},
 		{
 			Path:        "/:" + entityName + "_id",
+			PathType:    idType,
 			Method:      "POST",
 			Tags:        []string{c.entityName},
 			Summary:     fmt.Sprintf("Update %s", entityName),
@@ -62,6 +63,7 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 		},
 		{
 			Path:        "/:" + entityName + "_id",
+			PathType:    idType,
 			Method:      "DELETE",
 			Tags:        []string{c.entityName},
 			Summary:     fmt.Sprintf("Delete %s", entityName),

@@ -14,7 +14,8 @@ import (
 
 // Create 创建实体
 func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
-	var entity T
+	// var entity T
+	entity := NewModel[T]()
 	if err := ctx.ShouldBindJSON(&entity); err != nil {
 		return nil, err
 	}
@@ -84,12 +85,13 @@ func (c *CrudController[T]) List(ctx *gin.Context) (interface{}, error) {
 
 // Update 更新实体
 func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
-	id := ctx.Param(c.entityName + "_id")
+	id := ctx.Param(strings.ToLower(c.entityName) + "_id")
 	if id == "" {
 		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
 	}
 
-	var entity T
+	// var entity T
+	entity := NewModel[T]()
 	if err := ctx.ShouldBindJSON(&entity); err != nil {
 		return nil, err
 	}
@@ -104,7 +106,7 @@ func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 		return nil, errors.New(errors.ErrNotFound, "invalid id format")
 	}
 
-	entity.SetID(idInt)
+	entity.SetID(idInt) // SETID 没有用
 
 	if err := c.Repository.Update(ctx, &entity); err != nil {
 		return nil, err
@@ -115,18 +117,22 @@ func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 
 // Delete 删除实体
 func (c *CrudController[T]) Delete(ctx *gin.Context) (interface{}, error) {
-	id := ctx.Param(c.entityName + "_id")
+	id := ctx.Param(strings.ToLower(c.entityName) + "_id")
 	if id == "" {
 		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
 	}
-
-	idInt, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		return nil, errors.New(errors.ErrNotFound, "invalid id format")
+	var idTID any
+	// 处理 UUID 类型
+	if idUUID, err := uuid.Parse(id); err == nil {
+		idTID = idUUID // 直接赋值
+	} else if idInt, err := strconv.ParseUint(id, 10, 64); err == nil {
+		idTID = idInt // 直接赋值
+	} else {
+		return nil, errors.New(errors.ErrInvalidParam, "invalid id parameter")
 	}
 
-	opts := options.NewDeleteOptions()
-	if err := c.Repository.DeleteById(ctx, idInt, opts); err != nil {
+	// opts := options.NewDeleteOptions()
+	if err := c.Repository.DeleteById(ctx, idTID); err != nil {
 		return nil, err
 	}
 

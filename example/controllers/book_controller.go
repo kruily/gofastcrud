@@ -7,12 +7,12 @@ import (
 )
 
 type BookController struct {
-	*crud.CrudController[models.Book]
+	*crud.CrudController[*models.Book]
 }
 
 func NewBookController(db *gorm.DB) crud.ICrudController[crud.ICrudEntity] {
 	controller := &BookController{
-		CrudController: crud.NewCrudController(db, models.Book{}),
+		CrudController: crud.NewCrudController(db, &models.Book{}),
 	}
 	return controller
 }

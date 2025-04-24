@@ -129,7 +129,8 @@ func (r *Repository[T]) WithTx(tx *gorm.DB) IRepository[T] {
 
 // FindOne 查询单个实体
 func (r *Repository[T]) FindOne(ctx context.Context, query interface{}, args ...interface{}) (*T, error) {
-	var entity T
+	// var entity T
+	entity := NewModel[T]()
 	db := r.applyPreloads(r.db.WithContext(ctx))
 	err := db.Where(query, args...).First(&entity).Error
 	if err != nil {
@@ -160,7 +161,8 @@ func (r *Repository[T]) FindAll(ctx context.Context, query interface{}, args ...
 
 // FindById 根据ID查询
 func (r *Repository[T]) FindById(ctx context.Context, id any) (*T, error) {
-	var entity T
+	// var entity T
+	entity := NewModel[T]()
 	db := r.applyPreloads(r.db.WithContext(ctx))
 	err := db.First(&entity, id).Error
 	if err != nil {
@@ -303,12 +305,14 @@ func (r *Repository[T]) Delete(ctx context.Context, entity *T, opts ...*options.
 			r.db = r.db.Set("deleted_by", opts[0].DeletedBy)
 		}
 	}
-	return r.db.WithContext(ctx).Delete(entity).Error
+	return r.db.WithContext(ctx).Delete(entity).Where(entity).Error
 }
 
 // DeleteById 根据ID删除
 func (r *Repository[T]) DeleteById(ctx context.Context, id any, opts ...*options.DeleteOptions) error {
-	var entity T
+	// var entity T
+	entity := NewModel[T]()
+	// entity.Init()
 	if err := entity.SetID(id); err != nil {
 		return err
 	}

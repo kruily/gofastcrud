@@ -26,13 +26,11 @@ type GoFastCrudApp struct {
 func NewDefaultGoFastCrudApp(opts ...Option) *GoFastCrudApp {
 
 	container := di.SINGLE()
-	// 获取配置管理器
 
 	opt := &AppOption{}
 	for _, o := range opts {
 		o(opt)
 	}
-
 	// 获取数据库模组
 	db := database.New()
 	db.Init(&config.CONFIG_MANAGER.GetConfig().Database)
