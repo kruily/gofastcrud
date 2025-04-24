@@ -78,14 +78,20 @@ func main() {
 // models/user.go
 type User struct {
     // 嵌入crud基础实体 
-    crud.BaseEntity  `json:"-"` //不参与json序列化
+    *crud.BaseEntity  `json:"-"` //不参与json序列化
 	Username  string `json:"username" binding:"required" description:"用户名"`
 	Email     string `json:"email" description:"邮箱地址"`
 }
 
 // 定义表名 必须实现
-func (u User) TableName() string {
+func (u *User) TableName() string {
 	return "users"
+}
+// 初始化 必须实现
+func (u *User)Init(){
+    if u.BaseUUIDEntity == nil {
+		u.BaseUUIDEntity = &crud.BaseUUIDEntity{}
+	}
 }
 ```
 
