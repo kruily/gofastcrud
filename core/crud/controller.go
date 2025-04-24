@@ -35,6 +35,11 @@ type ICrudController[T ICrudEntity] interface {
 	GetEntityName() string
 	// EnableCache 启用缓存
 	EnableCache(cacheTTL int)
+	// 路由管理
+	AddRoute(route types.APIRoute)
+	AddRoutes(routes []types.APIRoute)
+	GetRoutes() []types.APIRoute
+	ClearRoutes()
 
 	// 批量操作
 	BatchCreate(ctx *gin.Context) (interface{}, error)
@@ -131,6 +136,7 @@ func (c *CrudController[T]) WrapHandler(handler types.HandlerFunc) gin.HandlerFu
 		if route != nil && route.Cache.Enable {
 			// 开启缓存
 		}
+		// 添加日志记录中间件，记录请求信息
 		result, err := handler(ctx)
 		if err != nil {
 			var appErr *errors.AppError
@@ -143,6 +149,7 @@ func (c *CrudController[T]) WrapHandler(handler types.HandlerFunc) gin.HandlerFu
 			ctx.JSON(appErr.HTTPStatus(), c.Responser.Error(appErr))
 			return
 		}
+		// 日志记录请求返回结果
 		ctx.JSON(200, result)
 	}
 }
@@ -155,6 +162,11 @@ func (c *CrudController[T]) AddRoute(route types.APIRoute) {
 // AddRoutes 添加多个自定义路由
 func (c *CrudController[T]) AddRoutes(routes []types.APIRoute) {
 	c.routes = append(c.routes, routes...)
+}
+
+// ClearRoutes 清除所有自定义路由(注册到gin后使用)
+func (c *CrudController[T]) ClearRoutes() {
+	c.routes = []types.APIRoute{}
 }
 
 // RegisterRoutes 注册所有路由

@@ -133,9 +133,6 @@ func (r *Repository[T]) FindOne(ctx context.Context, query interface{}, args ...
 	db := r.applyPreloads(r.db.WithContext(ctx))
 	err := db.Where(query, args...).First(&entity).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
 		return nil, err
 	}
 	return &entity, nil

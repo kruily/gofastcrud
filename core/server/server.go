@@ -62,13 +62,6 @@ func (s *Server) PublishVersion(version types.APIVersion) {
 	s.apiGroups[version] = group
 }
 
-// RegisterRoutes 注册路由
-func (s *Server) RegisterRoutes(register types.RouteRegister) {
-	for _, group := range s.apiGroups {
-		register(group)
-	}
-}
-
 // Run 启动服务并处理优雅关闭
 func (s *Server) Run() error {
 	// 启用 Swagger 文档
@@ -145,6 +138,7 @@ func (s *Server) RegisterCrudController(path string, controller interface{}, ent
 
 			// 生成对应版本的文档
 			s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
+			c.ClearRoutes()
 		}
 	}
 }
@@ -164,6 +158,7 @@ func (s *Server) RegisterCrudControllerWithFather(father any, path string, contr
 		routePath = strings.TrimPrefix(g.BasePath(), "/api/"+string(version))
 		routePath = strings.TrimPrefix(routePath, "/")
 		s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
+		c.ClearRoutes()
 	}
 
 }
