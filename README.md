@@ -137,7 +137,7 @@ func NewUserController(db *gorm.DB) *UserController {
     })
 
     // 或者
-    controller.AddRoutes([]types.APIRoute{
+    controller.AddRoutes([]*types.APIRoute{
         // 链式写法
         types.Post("/register", controller.Registor).  // Post、Get、Put、Delete 等方法
 			WithSummary("注册用户"). // swagger 标题 信息
@@ -213,6 +213,7 @@ type ICrudResponse interface {
 	Pagenation(items interface{}, total int64, page int, size int) interface{}
 }
 ```
+然后在NewDefaultGoFastCrudApp中传入即可 ```NewDefaultGoFastCrudApp(WithResponse(CustomResponser{}))```
 
 ### DI 支持
 ```go
