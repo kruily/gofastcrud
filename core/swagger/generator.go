@@ -35,16 +35,16 @@ func (g *Generator) RegisterEntityWithVersion(entityType reflect.Type, basePath 
 	paths := make(map[string]spec.PathItem)
 
 	// 获取所有路由
-	var allRoutes []types.APIRoute
+	var allRoutes []*types.APIRoute
 	switch c := controller.(type) {
 	case *crud.CrudController[crud.ICrudEntity]:
 		allRoutes = c.GetRoutes()
-	case interface{ GetRoutes() []types.APIRoute }:
+	case interface{ GetRoutes() []*types.APIRoute }:
 		allRoutes = c.GetRoutes()
 	}
 
 	// 按路径分组路由
-	routeGroups := make(map[string][]types.APIRoute)
+	routeGroups := make(map[string][]*types.APIRoute)
 	for _, route := range allRoutes {
 		path := fmt.Sprintf("/%s%s", routePath, route.Path)
 		re := regexp.MustCompile(`:\w+_id`)
@@ -350,7 +350,7 @@ func (g *Generator) getFieldSchema(field reflect.StructField) spec.Schema {
 }
 
 // generateOperation 生成操作文档
-func (g *Generator) generateOperation(route types.APIRoute, entityName string) *spec.Operation {
+func (g *Generator) generateOperation(route *types.APIRoute, entityName string) *spec.Operation {
 	// 生成 operationId
 	operationId := ""
 	if len(strings.Split(route.Path, "/")) > 1 {

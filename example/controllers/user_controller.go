@@ -29,7 +29,7 @@ func NewUserController(db *gorm.DB) crud.ICrudController[crud.ICrudEntity] {
 	controller := &UserController{
 		CrudController: crud.NewCrudController(db, &models.User{}),
 	}
-	controller.AddRoute(types.APIRoute{
+	controller.AddRoute(&types.APIRoute{
 		Method:   http.MethodPost,
 		Path:     "/register",
 		Summary:  "注册用户",

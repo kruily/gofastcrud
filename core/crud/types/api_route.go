@@ -47,74 +47,74 @@ type APIRoute struct {
 	Cache       Cache             `doc:"cache"`       // 缓存配置
 }
 
-func Post(path string, handler HandlerFunc) APIRoute {
-	return APIRoute{
+func Post(path string, handler HandlerFunc) *APIRoute {
+	return &APIRoute{
 		Path:    path,
 		Method:  "POST",
 		Handler: handler,
 	}
 }
 
-func Get(path string, handler HandlerFunc) APIRoute {
-	return APIRoute{
+func Get(path string, handler HandlerFunc) *APIRoute {
+	return &APIRoute{
 		Path:    path,
 		Method:  "GET",
 		Handler: handler,
 	}
 }
 
-func Put(path string, handler HandlerFunc) APIRoute {
-	return APIRoute{
+func Put(path string, handler HandlerFunc) *APIRoute {
+	return &APIRoute{
 		Path:    path,
 		Method:  "PUT",
 		Handler: handler,
 	}
 }
 
-func Delete(path string, handler HandlerFunc) APIRoute {
-	return APIRoute{
+func Delete(path string, handler HandlerFunc) *APIRoute {
+	return &APIRoute{
 		Path:    path,
 		Method:  "DELETE",
 		Handler: handler,
 	}
 }
 
-func (r APIRoute) WithSummary(summary string) APIRoute {
+func (r *APIRoute) WithSummary(summary string) *APIRoute {
 	r.Summary = summary
 	return r
 }
 
-func (r APIRoute) WithTags(tags []string) APIRoute {
+func (r *APIRoute) WithTags(tags []string) *APIRoute {
 	r.Tags = tags
 	return r
 }
 
-func (r APIRoute) WithDescription(description string) APIRoute {
+func (r *APIRoute) WithDescription(description string) *APIRoute {
 	r.Description = description
 	return r
 }
 
-func (r APIRoute) WithParameters(params ...Parameter) APIRoute {
+func (r *APIRoute) WithParameters(params ...Parameter) *APIRoute {
 	r.Parameters = params
 	return r
 }
 
-func (r APIRoute) WithRequest(req interface{}) APIRoute {
+func (r *APIRoute) WithRequest(req interface{}) *APIRoute {
 	r.Request = req
 	return r
 }
 
-func (r APIRoute) WithResponse(res interface{}) APIRoute {
+func (r *APIRoute) WithResponse(res interface{}) *APIRoute {
 	r.Response = res
 	return r
 }
 
-func (r APIRoute) WithMiddlewares(middlewares ...gin.HandlerFunc) APIRoute {
+func (r *APIRoute) WithMiddlewares(middlewares ...gin.HandlerFunc) *APIRoute {
 	r.Middlewares = middlewares
 	return r
 }
 
-func (r APIRoute) WithCache(enable bool, key string, ttl int, force bool) APIRoute {
+func (r *APIRoute) WithCache(enable bool, key string, ttl int, force bool) *APIRoute {
 	r.Cache = Cache{
 		Enable: enable,
 		Key:    key,

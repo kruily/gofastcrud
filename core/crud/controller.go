@@ -36,10 +36,10 @@ type ICrudController[T ICrudEntity] interface {
 	// EnableCache 启用缓存
 	EnableCache(cacheTTL int)
 	// 路由管理
-	AddRoute(route types.APIRoute)
-	AddRoutes(routes []types.APIRoute)
-	GetRoutes() []types.APIRoute
-	ClearRoutes()
+	AddRoute(route *types.APIRoute)     // 添加自定义路由
+	AddRoutes(routes []*types.APIRoute) // 添加多个自定义路由
+	GetRoutes() []*types.APIRoute       // 获取所有路由
+	ClearRoutes()                       // 清除所有路由
 
 	// 批量操作
 	BatchCreate(ctx *gin.Context) (interface{}, error)
@@ -55,7 +55,7 @@ type CrudController[T ICrudEntity] struct {
 	entity      T
 	entityName  string // 添加实体名称字段
 	middlewares map[string][]gin.HandlerFunc
-	routes      []types.APIRoute
+	routes      []*types.APIRoute
 	group       *gin.RouterGroup
 }
 
@@ -87,7 +87,7 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 
 // EnableCache 启用缓存
 func (c *CrudController[T]) EnableCache(cacheTTL int) {
-	c.routes = []types.APIRoute{}
+	c.routes = []*types.APIRoute{}
 	c.routes = append(c.routes, c.standardRoutes(true, cacheTTL)...)
 }
 
@@ -155,18 +155,18 @@ func (c *CrudController[T]) WrapHandler(handler types.HandlerFunc) gin.HandlerFu
 }
 
 // AddRoute 添加自定义路由
-func (c *CrudController[T]) AddRoute(route types.APIRoute) {
+func (c *CrudController[T]) AddRoute(route *types.APIRoute) {
 	c.routes = append(c.routes, route)
 }
 
 // AddRoutes 添加多个自定义路由
-func (c *CrudController[T]) AddRoutes(routes []types.APIRoute) {
+func (c *CrudController[T]) AddRoutes(routes []*types.APIRoute) {
 	c.routes = append(c.routes, routes...)
 }
 
 // ClearRoutes 清除所有自定义路由(注册到gin后使用)
 func (c *CrudController[T]) ClearRoutes() {
-	c.routes = []types.APIRoute{}
+	c.routes = []*types.APIRoute{}
 }
 
 // RegisterRoutes 注册所有路由
@@ -216,17 +216,17 @@ func (c *CrudController[T]) GetRoute(ctx *gin.Context) *types.APIRoute {
 		switch {
 		case route.Path == "": // 空路径匹配根路由，如 /api/v1/users
 			if basePath == requestPath {
-				return &route
+				return route
 			}
 		case route.Path == "/:id": // ID路由匹配，如 /api/v1/users/123
 			if len(ctx.Params) > 0 && ctx.Param("id") != "" {
-				return &route
+				return route
 			}
 		default: // 其他自定义路由
 			// 构建完整的路由路径进行比较
 			fullRoutePath := basePath[:strings.LastIndex(basePath, "/")] + route.Path
 			if fullRoutePath == requestPath {
-				return &route
+				return route
 			}
 		}
 	}
@@ -235,7 +235,7 @@ func (c *CrudController[T]) GetRoute(ctx *gin.Context) *types.APIRoute {
 }
 
 // GetRoutes 获取所有路由
-func (c *CrudController[T]) GetRoutes() []types.APIRoute {
+func (c *CrudController[T]) GetRoutes() []*types.APIRoute {
 	return c.routes
 }
 

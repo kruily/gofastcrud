@@ -9,13 +9,13 @@ import (
 )
 
 // standardRoutes 标准路由
-func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.APIRoute {
+func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []*types.APIRoute {
 	entityName := strings.ToLower(c.entityName[:1]) + c.entityName[1:]
 	idType := "integer"
 	if _, ok := c.entity.GetID().(uuid.UUID); ok {
 		idType = "string"
 	}
-	return []types.APIRoute{
+	return []*types.APIRoute{
 		{
 			Path:        "/:" + entityName + "_id",
 			Method:      "GET",
