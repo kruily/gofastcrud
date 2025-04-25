@@ -16,7 +16,7 @@ import (
 func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
 	// var entity T
 	entity := NewModel[T]()
-	if err := ctx.ShouldBindJSON(&entity); err != nil {
+	if err := ctx.ShouldBindJSON(entity); err != nil {
 		return nil, err
 	}
 
@@ -25,7 +25,7 @@ func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	err := c.Repository.Create(ctx, &entity)
+	err := c.Repository.Create(ctx, entity)
 	if err != nil {
 		return nil, err
 	}
@@ -54,10 +54,6 @@ func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
 	entity, err := c.Repository.FindById(ctx, idTID)
 	if err != nil {
 		return nil, err
-	}
-
-	if entity == nil {
-		return nil, errors.New(errors.ErrNotFound, "record not found")
 	}
 
 	return c.Responser.Success(entity), nil
@@ -90,25 +86,35 @@ func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 		return nil, errors.New(errors.ErrNotFound, "missing id parameter")
 	}
 
-	// var entity T
-	entity := NewModel[T]()
-	if err := ctx.ShouldBindJSON(&entity); err != nil {
+	// 将请求体绑定到map
+	updateFields := make(map[string]interface{})
+	if err := ctx.ShouldBindJSON(&updateFields); err != nil {
 		return nil, err
 	}
 
-	// 验证实体
-	if err := validator.Validate(entity); err != nil {
+	// 验证字段
+	if err := validator.ValidateMap(updateFields, c.entity); err != nil {
 		return nil, err
 	}
 
-	idInt, err := strconv.ParseUint(id, 10, 64)
+	var idTID any
+
+	// 处理 UUID 类型
+	if idUUID, err := uuid.Parse(id); err == nil {
+		idTID = idUUID // 直接赋值
+	} else if idInt, err := strconv.ParseUint(id, 10, 64); err == nil {
+		idTID = idInt // 直接赋值
+	} else {
+		return nil, errors.New(errors.ErrInvalidParam, "invalid id parameter")
+	}
+
+	entity, err := c.Repository.FindById(ctx, idTID)
 	if err != nil {
-		return nil, errors.New(errors.ErrNotFound, "invalid id format")
+		return nil, errors.New(errors.ErrNotFound, "No record of this id was found")
 	}
 
-	entity.SetID(idInt) // SETID 没有用
-
-	if err := c.Repository.Update(ctx, &entity); err != nil {
+	// 更新指定字段
+	if err := c.Repository.Update(ctx, entity, updateFields); err != nil {
 		return nil, err
 	}
 

@@ -2,7 +2,6 @@ package crud
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -14,11 +13,11 @@ import (
 // IRepository 仓储接口
 type IRepository[T ICrudEntity] interface {
 	// 基础操作
-	Create(ctx context.Context, entity *T) error
-	Update(ctx context.Context, entity *T) error
-	Delete(ctx context.Context, entity *T, opts ...*options.DeleteOptions) error
+	Create(ctx context.Context, entity T) error
+	Update(ctx context.Context, entity T, updateFields map[string]interface{}) error
+	Delete(ctx context.Context, entity T, opts ...*options.DeleteOptions) error
 	DeleteById(ctx context.Context, id any, opts ...*options.DeleteOptions) error
-	FindById(ctx context.Context, id any) (*T, error)
+	FindById(ctx context.Context, id any) (T, error)
 	Find(ctx context.Context, entity T, opts *options.QueryOptions) ([]T, error)
 	Count(ctx context.Context, entity T) (int64, error)
 
@@ -28,7 +27,7 @@ type IRepository[T ICrudEntity] interface {
 	BatchDelete(ctx context.Context, ids []any, opts ...*options.DeleteOptions) error
 
 	// 条件查询
-	FindOne(ctx context.Context, query interface{}, args ...interface{}) (*T, error)
+	FindOne(ctx context.Context, query interface{}, args ...interface{}) (T, error)
 	FindAll(ctx context.Context, query interface{}, args ...interface{}) ([]T, error)
 	Exists(ctx context.Context, query interface{}, args ...interface{}) (bool, error)
 
@@ -128,15 +127,15 @@ func (r *Repository[T]) WithTx(tx *gorm.DB) IRepository[T] {
 }
 
 // FindOne 查询单个实体
-func (r *Repository[T]) FindOne(ctx context.Context, query interface{}, args ...interface{}) (*T, error) {
+func (r *Repository[T]) FindOne(ctx context.Context, query interface{}, args ...interface{}) (T, error) {
 	// var entity T
 	entity := NewModel[T]()
 	db := r.applyPreloads(r.db.WithContext(ctx))
 	err := db.Where(query, args...).First(&entity).Error
 	if err != nil {
-		return nil, err
+		return entity, err
 	}
-	return &entity, nil
+	return entity, nil
 }
 
 // Find 查询实体列表
@@ -160,22 +159,19 @@ func (r *Repository[T]) FindAll(ctx context.Context, query interface{}, args ...
 }
 
 // FindById 根据ID查询
-func (r *Repository[T]) FindById(ctx context.Context, id any) (*T, error) {
+func (r *Repository[T]) FindById(ctx context.Context, id any) (T, error) {
 	// var entity T
 	entity := NewModel[T]()
 	db := r.applyPreloads(r.db.WithContext(ctx))
 	err := db.First(&entity, id).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
+		return entity, err
 	}
-	return &entity, nil
+	return entity, nil
 }
 
 // 实现所有接口方法...
-func (r *Repository[T]) Create(ctx context.Context, entity *T) error {
+func (r *Repository[T]) Create(ctx context.Context, entity T) error {
 	return r.db.WithContext(ctx).Create(entity).Error
 }
 
@@ -293,7 +289,7 @@ func (r *Repository[T]) CountField(ctx context.Context, field string) (int64, er
 }
 
 // Delete 删除实体
-func (r *Repository[T]) Delete(ctx context.Context, entity *T, opts ...*options.DeleteOptions) error {
+func (r *Repository[T]) Delete(ctx context.Context, entity T, opts ...*options.DeleteOptions) error {
 	if len(opts) > 0 {
 		if opts[0].Force {
 			return r.db.WithContext(ctx).Unscoped().Delete(&entity).Error
@@ -316,7 +312,7 @@ func (r *Repository[T]) DeleteById(ctx context.Context, id any, opts ...*options
 	if err := entity.SetID(id); err != nil {
 		return err
 	}
-	return r.Delete(ctx, &entity, opts...)
+	return r.Delete(ctx, entity, opts...)
 }
 
 // 链式查询方法
@@ -356,6 +352,11 @@ func (r *Repository[T]) Having(query interface{}, args ...interface{}) IReposito
 }
 
 // Update 更新实体
-func (r *Repository[T]) Update(ctx context.Context, entity *T) error {
-	return r.db.WithContext(ctx).Save(entity).Error
+func (r *Repository[T]) Update(ctx context.Context, entity T, updateFields map[string]interface{}) error {
+	// 如果没有提供更新字段，则使用整个实体进行更新
+	if updateFields == nil {
+		return r.db.WithContext(ctx).Updates(entity).Error
+	}
+	// 只更新指定字段
+	return r.db.WithContext(ctx).Model(entity).Updates(updateFields).Error
 }

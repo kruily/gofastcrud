@@ -213,15 +213,6 @@ func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 		t = t.Elem()
 	}
 
-	// 检查是否已经处理过该类型
-	if _, exists := g.processedTypes[t]; exists {
-		return &spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Ref: spec.MustCreateRef(fmt.Sprintf("#/definitions/%s", t.Name())),
-			},
-		}
-	}
-
 	// 创建基础schema
 	schema := &spec.Schema{
 		SchemaProps: spec.SchemaProps{
@@ -231,11 +222,16 @@ func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 		},
 	}
 
-	// 先将schema加入到已处理map中，避免循环引用
-	g.processedTypes[t] = schema
-
 	// 处理字段
 	if t.Kind() == reflect.Struct {
+		// 检查是否已经处理过该类型
+		if _, exists := g.processedTypes[t]; exists {
+			return &spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Ref: spec.MustCreateRef(fmt.Sprintf("#/definitions/%s", t.Name())),
+				},
+			}
+		}
 		for i := 0; i < t.NumField(); i++ {
 			field := t.Field(i)
 
@@ -281,7 +277,10 @@ func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 			if required := field.Tag.Get("binding"); required == "required" {
 				schema.Required = append(schema.Required, name)
 			}
+
 		}
+		// 将schema加入到已处理map中，避免循环引用
+		g.processedTypes[t] = schema
 	} else if t.Kind() == reflect.Slice {
 		elemSchema := g.generateSchema(t.Elem())
 		schema.Type = []string{"array"}

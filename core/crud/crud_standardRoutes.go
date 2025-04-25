@@ -79,7 +79,7 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 			Description: fmt.Sprintf("Create multiple %s records", entityName),
 			Handler:     c.BatchCreate,
 			Request:     []T{},
-			Response:    []T{},
+			Response:    c.Responser.Success("批量创建成功"),
 			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "batchCreate"), TTL: cacheTTL},
 		},
 		{
@@ -89,8 +89,9 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 			Summary:     fmt.Sprintf("Batch Update %s", c.entityName),
 			Description: fmt.Sprintf("Update multiple %s records", c.entityName),
 			Handler:     c.BatchUpdate,
-			Request:     []T{c.entity},
-			Response:    []T{c.entity},
+			Parameters:  c.modeParams(),
+			Request:     []T{},
+			Response:    c.Responser.Success("批量更新成功"),
 			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "batchUpdate"), TTL: cacheTTL},
 		},
 		{
@@ -100,8 +101,8 @@ func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []types.API
 			Summary:     fmt.Sprintf("Batch Delete %s", entityName),
 			Description: fmt.Sprintf("Delete multiple %s records", entityName),
 			Handler:     c.BatchDelete,
-			Request:     []uint{},
-			Response:    nil,
+			Parameters:  c.modeParams(),
+			Response:    c.Responser.Success("批量删除成功"),
 			Cache:       types.Cache{Enable: cache, Key: fmt.Sprintf("%s:%s", c.entityName, "batchDelete"), TTL: cacheTTL},
 		},
 	}

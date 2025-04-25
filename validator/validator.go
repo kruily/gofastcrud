@@ -1,7 +1,10 @@
 package validator
 
 import (
+	"reflect"
+
 	"github.com/go-playground/validator/v10"
+	"github.com/kruily/gofastcrud/errors"
 )
 
 // Validate 验证结构体
@@ -12,6 +15,33 @@ func Validate(obj interface{}) error {
 			return err
 		}
 		return err
+	}
+	return nil
+}
+
+// ValidateMap 验证map
+func ValidateMap(fields map[string]interface{}, entity any) error {
+	// 获取实体类型的反射信息
+	entityType := reflect.TypeOf(entity)
+	if entityType.Kind() == reflect.Ptr {
+		entityType = entityType.Elem()
+	}
+
+	// 验证字段
+	for fieldName, value := range fields {
+		// 检查字段是否存在
+		field, exists := entityType.FieldByName(fieldName)
+		if !exists {
+			return errors.New(errors.ErrInvalidParam, "invalid field: "+fieldName)
+		}
+
+		// 获取字段的验证标签
+		validateTag := field.Tag.Get("validate")
+		if validateTag != "" {
+			if err := ValidateVar(value, validateTag); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

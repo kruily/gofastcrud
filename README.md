@@ -235,6 +235,42 @@ repo := di.GetSingletonByName(models.User{}.Table())
 ```
 Repository 实现 [`ICrudRepository`](./core/crud/repository.go) 接口
 
+### filter查询 快速支持
+在model中定义filter tag,以逗号分隔各操作符
+支持的操作符（**只允小写**）：
+- `gt` 大于
+- `gte` 大于等于
+- `lt` 小于
+- `lte` 小于等于
+- `eq` 等于
+- `neq` 不等于
+- `in` 在...中
+- `nin` 不在...中
+- `like` 模糊查询(像)
+- `nlike` 不模糊查询(不像)
+- `between` 范围查询
+- `null` 为空
+- `all` 包含所有
+
+示例：
+```go
+type User struct {
+	*crud.BaseUUIDEntity
+	Username string `gorm:"type:varchar(20);not null;unique" json:"username" filter:"eq,neq,like,nlike,in,nin"`
+	Password string `gorm:"type:varchar(20);not null" json:"-"`
+	Email    string `gorm:"type:varchar(20);not null;unique" json:"email" filter:"eq,neq,like,nlike,in,nin"`
+}
+
+func (*User) TableName() string {
+	return "users"
+}
+
+func (u *User) Init() {
+	if u.BaseUUIDEntity == nil {
+		u.BaseUUIDEntity = &crud.BaseUUIDEntity{}
+	}
+}
+```
 
 ## 贡献指南
 
