@@ -2,49 +2,31 @@ package crud
 
 import (
 	"reflect"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kruily/gofastcrud/core/crud/module"
 	"github.com/kruily/gofastcrud/core/crud/types"
 	"github.com/kruily/gofastcrud/core/di"
-	"github.com/kruily/gofastcrud/errors"
 	"gorm.io/gorm"
 )
 
 // ICrudController 控制器接口
 type ICrudController[T ICrudEntity] interface {
-	// 基础 CRUD 操作
-	Create(ctx *gin.Context) (interface{}, error)
-	GetById(ctx *gin.Context) (interface{}, error)
-	Update(ctx *gin.Context) (interface{}, error)
-	Delete(ctx *gin.Context) (interface{}, error)
-	List(ctx *gin.Context) (interface{}, error)
-
 	// 中间件管理
-	UseMiddleware(method string, middlewares ...gin.HandlerFunc)
 	GetMiddlewares() map[string][]gin.HandlerFunc
 
 	// 路由注册
 	RegisterRoutes()
-	GetGroup() *gin.RouterGroup
-	SetGroup(group *gin.RouterGroup)
-	// GetEntity 获取实体
-	GetEntity() ICrudEntity
-	// GetEntityName 获取实体名称
-	GetEntityName() string
-	// EnableCache 启用缓存
-	EnableCache(cacheTTL int)
+	GetGroup() *gin.RouterGroup      // 获取路由组
+	SetGroup(group *gin.RouterGroup) // 设置路由组
+	GetEntity() ICrudEntity          // GetEntity 获取实体
+	GetEntityName() string           // GetEntityName 获取实体名称
 	// 路由管理
 	AddRoute(route *types.APIRoute)     // 添加自定义路由
 	AddRoutes(routes []*types.APIRoute) // 添加多个自定义路由
 	GetRoutes() []*types.APIRoute       // 获取所有路由
 	ClearRoutes()                       // 清除所有路由
-
-	// 批量操作
-	BatchCreate(ctx *gin.Context) (interface{}, error)
-	BatchUpdate(ctx *gin.Context) (interface{}, error)
-	BatchDelete(ctx *gin.Context) (interface{}, error)
+	GetResponser() module.ICrudResponse // 获取响应器
 }
 
 // CrudController 控制器实现
@@ -85,12 +67,6 @@ func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] 
 	return c
 }
 
-// EnableCache 启用缓存
-func (c *CrudController[T]) EnableCache(cacheTTL int) {
-	c.routes = []*types.APIRoute{}
-	c.routes = append(c.routes, c.standardRoutes(true, cacheTTL)...)
-}
-
 // configurePreloads 配置预加载
 func (c *CrudController[T]) configurePreloads() {
 	// 获取实体类型
@@ -128,32 +104,6 @@ func (c *CrudController[T]) GetMiddlewares() map[string][]gin.HandlerFunc {
 	return c.middlewares
 }
 
-// WrapHandler 包装处理函数（公开方法）
-func (c *CrudController[T]) WrapHandler(handler types.HandlerFunc) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		// 检查请求的APiRoute是否开启缓存
-		route := c.GetRoute(ctx)
-		if route != nil && route.Cache.Enable {
-			// 开启缓存
-		}
-		// 添加日志记录中间件，记录请求信息
-		result, err := handler(ctx)
-		if err != nil {
-			var appErr *errors.AppError
-			switch e := err.(type) {
-			case *errors.AppError:
-				appErr = e
-			default:
-				appErr = errors.Wrap(err, errors.ErrInternal, "内部服务器错误")
-			}
-			ctx.JSON(appErr.HTTPStatus(), c.Responser.Error(appErr))
-			return
-		}
-		// 日志记录请求返回结果
-		ctx.JSON(200, result)
-	}
-}
-
 // AddRoute 添加自定义路由
 func (c *CrudController[T]) AddRoute(route *types.APIRoute) {
 	c.routes = append(c.routes, route)
@@ -171,67 +121,12 @@ func (c *CrudController[T]) ClearRoutes() {
 
 // RegisterRoutes 注册所有路由
 func (c *CrudController[T]) RegisterRoutes() {
-	// 注册所有路由
-	for _, route := range c.routes {
-		// 获取中间件
-		handlers := c.middlewares["*"]
-		handlers = append(handlers, c.middlewares[route.Method]...)
-		handlers = append(handlers, route.Middlewares...)
-		handlers = append(handlers, c.WrapHandler(route.Handler))
-
-		switch route.Method {
-		case "GET":
-			c.group.GET(route.Path, handlers...)
-		case "POST":
-			c.group.POST(route.Path, handlers...)
-		case "PUT":
-			c.group.PUT(route.Path, handlers...)
-		case "DELETE":
-			c.group.DELETE(route.Path, handlers...)
-		case "PATCH":
-			c.group.PATCH(route.Path, handlers...)
-		case "OPTIONS":
-			c.group.OPTIONS(route.Path, handlers...)
-		}
-	}
+	controllerRegisterRoute(c)
 }
 
 // GetRoute 根据请求获取APIRoute
 func (c *CrudController[T]) GetRoute(ctx *gin.Context) *types.APIRoute {
-	// 获取当前请求的方法和路径
-	method := ctx.Request.Method
-	path := ctx.Request.URL.Path
-
-	// 获取基础路径和请求路径
-	basePath := ctx.FullPath() // 例如: /api/v1/users/:id
-	requestPath := path        // 例如: /api/v1/users/123
-
-	for _, route := range c.routes {
-		// 方法必须匹配
-		if route.Method != method {
-			continue
-		}
-
-		// 处理不同类型的路由匹配
-		switch {
-		case route.Path == "": // 空路径匹配根路由，如 /api/v1/users
-			if basePath == requestPath {
-				return route
-			}
-		case route.Path == "/:id": // ID路由匹配，如 /api/v1/users/123
-			if len(ctx.Params) > 0 && ctx.Param("id") != "" {
-				return route
-			}
-		default: // 其他自定义路由
-			// 构建完整的路由路径进行比较
-			fullRoutePath := basePath[:strings.LastIndex(basePath, "/")] + route.Path
-			if fullRoutePath == requestPath {
-				return route
-			}
-		}
-	}
-
-	return nil
+	return getRoute(c, ctx)
 }
 
 // GetRoutes 获取所有路由
@@ -257,4 +152,9 @@ func (c *CrudController[T]) GetGroup() *gin.RouterGroup {
 // SetGroup 设置路由组
 func (c *CrudController[T]) SetGroup(group *gin.RouterGroup) {
 	c.group = group
+}
+
+// GetResponser 获取响应器
+func (c *CrudController[T]) GetResponser() module.ICrudResponse {
+	return c.Responser
 }

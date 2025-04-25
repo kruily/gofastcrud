@@ -18,6 +18,20 @@ type QueryField struct {
 	FilterTag string
 }
 
+// ModeParams 获取模式参数
+// c ICrudController[ICrudEntity] 控制器
+// return []types.Parameter 参数列表
+func ModeParams(c ICrudController[ICrudEntity]) []types.Parameter {
+	// 获取所有可查询字段
+	queryFields := queryFields(c.GetEntity())
+	params := []types.Parameter{}
+	params, err := generateModeQueryParams(params, queryFields)
+	if err != nil {
+		panic(err)
+	}
+	return params
+}
+
 // queryFields 从结构体中获取获取可查询字段
 func queryFields(entity any) []QueryField {
 	entityType := reflect.TypeOf(entity)

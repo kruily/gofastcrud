@@ -63,18 +63,6 @@ func (c *CrudController[T]) queryParams() []types.Parameter {
 	}
 
 	// 为每个字段添加过滤参数
-	queryParams = append(queryParams, c.modeParams()...)
+	queryParams = append(queryParams, ModeParams(c)...)
 	return queryParams
-}
-
-// deleteParams 获取删除参数
-func (c *CrudController[T]) modeParams() []types.Parameter {
-	// 获取所有可查询字段
-	queryFields := queryFields(c.entity)
-	params := []types.Parameter{}
-	params, err := generateModeQueryParams(params, queryFields)
-	if err != nil {
-		panic(err)
-	}
-	return params
 }

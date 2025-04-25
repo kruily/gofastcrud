@@ -105,7 +105,7 @@ factory.Register(server, models.User{})
 ```
 
 #### 4.2 使用自定义控制器
-需要继承 `crud.CrudController` 并定义出创建控制器实例的方法
+需要继承 `crud.CrudController`（标准控制器） 并定义出创建控制器实例的方法
 ```go
 // controllers/user_controller.go
 type UserController struct {
@@ -164,6 +164,10 @@ func (c *UserController) Login(ctx *gin.Context)(interface{}, error) {
 ```go
 factory.RegisterCustom(server, controllers.NewUserController)
 ```
+
+
+然后有兄弟就要问了：小登小登，上面的标准控制器我会了，可我有些需求要不了某些接口或者我想要个没有接口的控制器，有没有什么办法呢？
+有的，兄弟有的。可以使用"空"的控制器`crud.BlankController`即可，对应的实例化方法为`crud.NewBlankController`,于标准控制器的用法一模一样，除了没有接口。
 
 ### 5. 完整示例
 [example](./example)
@@ -271,6 +275,16 @@ func (u *User) Init() {
 		u.BaseUUIDEntity = &crud.BaseUUIDEntity{}
 	}
 }
+```
+自定义接口同样可以使用filter查询，在录入接口信息时，使用`crud.ModeParam()`
+```go
+controller.AddRoutes([]*types.APIRoute{
+    types.Get("/list", controller.List).
+		WithSummary("获取用户列表").
+		...
+		WithParameters(crud.ModeParams(controller)...).  // 添加这行
+        ...
+})
 ```
 
 ## 贡献指南
