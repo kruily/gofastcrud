@@ -212,6 +212,16 @@ func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
+	fmt.Printf("log: %s\n", t.Name())
+
+	// 检查是否已经处理过该类型
+	if _, exists := g.processedTypes[t]; exists {
+		return &spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Ref: spec.MustCreateRef(fmt.Sprintf("#/definitions/%s", t.Name())),
+			},
+		}
+	}
 
 	// 创建基础schema
 	schema := &spec.Schema{
@@ -222,24 +232,17 @@ func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 		},
 	}
 
+	// 将schema加入到已处理map中，避免循环引用
+	g.processedTypes[t] = schema
+
 	// 处理字段
 	if t.Kind() == reflect.Struct {
-		// 检查是否已经处理过该类型
-		if _, exists := g.processedTypes[t]; exists {
-			return &spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Ref: spec.MustCreateRef(fmt.Sprintf("#/definitions/%s", t.Name())),
-				},
-			}
-		}
 		for i := 0; i < t.NumField(); i++ {
 			field := t.Field(i)
-
 			// 跳过非导出字段
 			if !field.IsExported() {
 				continue
 			}
-
 			// 处理嵌入字段
 			if field.Anonymous {
 				if field.Type.Kind() == reflect.Ptr {
@@ -254,13 +257,11 @@ func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 				}
 				continue
 			}
-
 			// 处理 json 标签
 			jsonTag := field.Tag.Get("json")
 			if jsonTag == "-" || jsonTag == ",inline" {
 				continue
 			}
-
 			name := field.Name
 			if jsonTag != "" {
 				parts := strings.Split(jsonTag, ",")
@@ -268,25 +269,68 @@ func (g *Generator) generateSchema(t reflect.Type) *spec.Schema {
 					name = parts[0]
 				}
 			}
-
 			// 生成字段的 schema
 			fieldSchema := g.getFieldSchema(field)
 			schema.Properties[name] = fieldSchema
-
 			// 处理必填字段
 			if required := field.Tag.Get("binding"); required == "required" {
 				schema.Required = append(schema.Required, name)
 			}
+		}
+	}
+	return schema
+}
 
+// generateSliceSchema 生成切片的 Schema
+func (g *Generator) generateSliceSchema(t reflect.Type) *spec.Schema {
+	// 处理切片类型
+	elemType := t.Elem()
+
+	// 创建切片schema
+	schema := &spec.Schema{
+		SchemaProps: spec.SchemaProps{
+			Type: []string{"array"},
+			Items: &spec.SchemaOrArray{
+				Schema: &spec.Schema{},
+			},
+		},
+	}
+
+	// 如果元素类型是指针，获取其基础类型
+	if elemType.Kind() == reflect.Ptr {
+		elemType = elemType.Elem()
+	}
+
+	// 如果元素类型是结构体，生成引用
+	if elemType.Kind() == reflect.Struct {
+		// 检查是否已经处理过该类型
+		if _, exists := g.processedTypes[elemType]; exists {
+			schema.Items.Schema = &spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Ref: spec.MustCreateRef(fmt.Sprintf("#/definitions/%s", elemType.Name())),
+				},
+			}
+		} else {
+			// 先将元素类型添加到已处理映射中，防止循环引用
+			tempSchema := &spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Type:       []string{"object"},
+					Properties: make(map[string]spec.Schema),
+				},
+			}
+			g.processedTypes[elemType] = tempSchema
+
+			// 然后生成完整的schema
+			g.generateSchema(elemType)
+			schema.Items.Schema = &spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Ref: spec.MustCreateRef(fmt.Sprintf("#/definitions/%s", elemType.Name())),
+				},
+			}
 		}
-		// 将schema加入到已处理map中，避免循环引用
-		g.processedTypes[t] = schema
-	} else if t.Kind() == reflect.Slice {
-		elemSchema := g.generateSchema(t.Elem())
-		schema.Type = []string{"array"}
-		schema.Items = &spec.SchemaOrArray{
-			Schema: elemSchema,
-		}
+	} else {
+		// 处理基本类型
+		// schema.Items.Schema = g.generatePrimitiveSchema(elemType)
 	}
 
 	return schema
@@ -426,11 +470,16 @@ func (g *Generator) generateOperation(route *types.APIRoute, entityName string) 
 		}
 	}
 
-	// 添加请求体
+	// 添加请求体 Body 参数
 	if route.Method == "POST" || route.Method == "PUT" {
 		var schema *spec.Schema
 		if route.Request != nil {
-			schema = g.generateSchema(reflect.TypeOf(route.Request))
+			t := reflect.TypeOf(route.Request)
+			if t.Kind() == reflect.Slice {
+				schema = g.generateSliceSchema(t)
+			} else {
+				schema = g.generateSchema(reflect.TypeOf(route.Request))
+			}
 		} else {
 			schema = &spec.Schema{
 				SchemaProps: spec.SchemaProps{

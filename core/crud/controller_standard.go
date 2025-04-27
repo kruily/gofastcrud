@@ -43,6 +43,7 @@ type CrudController[T ICrudEntity] struct {
 
 // NewCrudController 创建控制器
 func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] {
+	entity.Init()
 	entityType := reflect.TypeOf(entity)
 	if entityType.Kind() == reflect.Ptr {
 		entityType = entityType.Elem()
