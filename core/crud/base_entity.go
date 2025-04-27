@@ -3,13 +3,8 @@ package crud
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/kruily/gofastcrud/errors"
 )
-
-type ID_TYPE interface {
-	~uint64 | ~string | uuid.UUID
-}
 
 // ICrudEntity CRUD 实体接口
 type ICrudEntity interface {

@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kruily/gofastcrud/config"
+	"github.com/kruily/gofastcrud/core/crud/module"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -14,17 +16,8 @@ type RedisCache struct {
 	client *redis.Client
 }
 
-// RedisConfig Redis配置
-type RedisConfig struct {
-	Host     string
-	Port     int
-	Password string
-	DB       int
-	PoolSize int
-}
-
 // NewRedisCache 创建Redis缓存实例
-func NewRedisCache(config RedisConfig) (*RedisCache, error) {
+func NewRedisCache(config config.RedisConfig) (module.ICache, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     config.Host + ":" + strconv.Itoa(config.Port),
 		Password: config.Password,

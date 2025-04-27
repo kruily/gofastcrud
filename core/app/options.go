@@ -8,6 +8,7 @@ import (
 type AppOption struct {
 	Response module.ICrudResponse
 	Jwt      module.IJwt
+	cache    module.ICache
 }
 
 // Option 应用选项
@@ -24,5 +25,12 @@ func WithResponse(response module.ICrudResponse) Option {
 func WithJwt(jwt module.IJwt) Option {
 	return func(o *AppOption) {
 		o.Jwt = jwt
+	}
+}
+
+// WithCache 设置缓存处理
+func WithCache(cache module.ICache) Option {
+	return func(o *AppOption) {
+		o.cache = cache
 	}
 }

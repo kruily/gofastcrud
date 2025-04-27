@@ -11,7 +11,7 @@ type ICache interface {
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
 
 	// Get 获取缓存
-	Get(ctx context.Context, key string) (string, error)
+	Get(ctx context.Context, key string, value any) error
 
 	// Delete 删除缓存
 	Delete(ctx context.Context, key string) error
