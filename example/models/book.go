@@ -17,5 +17,7 @@ func (*Book) TableName() string {
 }
 
 func (b *Book) Init() {
-	*b.BaseUUIDEntity = crud.BaseUUIDEntity{}
+	if b.BaseUUIDEntity == nil {
+		b.BaseUUIDEntity = &crud.BaseUUIDEntity{}
+	}
 }

@@ -16,7 +16,7 @@ import (
 	"github.com/kruily/gofastcrud/config"
 	"github.com/kruily/gofastcrud/core/crud"
 	"github.com/kruily/gofastcrud/core/crud/types"
-	"github.com/kruily/gofastcrud/core/swagger" // swagger files
+	"github.com/kruily/gofastcrud/core/openapi"
 	"github.com/kruily/gofastcrud/core/templates"
 )
 
@@ -24,7 +24,8 @@ type Server struct {
 	config         *config.Config
 	router         *gin.Engine
 	srv            *http.Server
-	swaggerGen     *swagger.Generator
+	swaggerGen     *openapi.Generator
+	openapiv3      *openapi.GeneratorV3
 	versionManager *VersionManager
 	apiGroups      map[types.APIVersion]*gin.RouterGroup
 }
@@ -46,7 +47,8 @@ func NewServer(cfg *config.Config) *Server {
 		config:         cfg,
 		router:         r,
 		srv:            srv,
-		swaggerGen:     swagger.NewGenerator(),
+		swaggerGen:     openapi.NewGenerator(), // 初始化 Swagger 文档生成器
+		openapiv3:      openapi.NewGeneratorV3(),
 		versionManager: NewVersionManager(),
 		apiGroups:      make(map[types.APIVersion]*gin.RouterGroup),
 	}
@@ -115,9 +117,9 @@ func (s *Server) EnableSwagger() {
 		}
 
 		// 获取所有文档
-		docs := s.swaggerGen.GetAllSwagger()
-
-		swagger.SwaggerUIHandler(w, r, versionStrs, string(currentVersion), docs)
+		// docs := s.swaggerGen.GetAllSwagger() // v2 版本
+		docs := s.openapiv3.GetAllSwagger() // todo v3 测试
+		openapi.SwaggerUIHandler(w, r, versionStrs, string(currentVersion), docs)
 	})
 
 	// 注册 Swagger UI 路由
@@ -137,7 +139,8 @@ func (s *Server) RegisterCrudController(path string, controller interface{}, ent
 			c.RegisterRoutes()
 
 			// 生成对应版本的文档
-			s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
+			// s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
+			s.openapiv3.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
 			c.ClearRoutes()
 		}
 	}
@@ -157,7 +160,8 @@ func (s *Server) RegisterCrudControllerWithFather(father any, path string, contr
 		// 生成对应版本的文档
 		routePath = strings.TrimPrefix(g.BasePath(), "/api/"+string(version))
 		routePath = strings.TrimPrefix(routePath, "/")
-		s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
+		// s.swaggerGen.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
+		s.openapiv3.RegisterEntityWithVersion(entityType, s.router.BasePath(), routePath, controller, string(version))
 		c.ClearRoutes()
 	}
 

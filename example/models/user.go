@@ -8,8 +8,8 @@ import (
 // @Description 用户信息
 type User struct {
 	*crud.BaseUUIDEntity
-	Username string `json:"username" binding:"required"`
-	Email    string `json:"email" binding:"required" gorm:"unique;"`
+	Username string `json:"username" binding:"required" description:"用户名"`
+	Email    string `json:"email" binding:"required" gorm:"unique;" description:"邮箱"`
 }
 
 func (*User) TableName() string {

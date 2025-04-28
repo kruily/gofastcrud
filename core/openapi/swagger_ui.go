@@ -1,4 +1,4 @@
-package swagger
+package openapi
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-openapi/spec"
 	"github.com/kruily/gofastcrud/core/templates"
 )
@@ -25,6 +26,11 @@ func SwaggerUIHandler(w http.ResponseWriter, r *http.Request, versions []string,
 	if path == "doc.json" {
 		w.Header().Set("Content-Type", "application/json")
 		if allDocs, ok := docs.(map[string]*spec.Swagger); ok {
+			if doc, exists := allDocs[currentVersion]; exists {
+				json.NewEncoder(w).Encode(doc)
+			}
+		}
+		if allDocs, ok := docs.(map[string]*openapi3.T); ok {
 			if doc, exists := allDocs[currentVersion]; exists {
 				json.NewEncoder(w).Encode(doc)
 			}

@@ -1,4 +1,4 @@
-package swagger
+package openapi
 
 // SwaggerDoc 自定义路由的 Swagger 文档
 type SwaggerDoc struct {
