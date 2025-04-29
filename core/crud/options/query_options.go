@@ -1,9 +1,6 @@
 package options
 
 import (
-	"strings"
-
-	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
@@ -110,87 +107,6 @@ func WithSelect(selects []string) func(*QueryOptions) {
 func WithFilter(filter map[string]interface{}) func(*QueryOptions) {
 	return func(q *QueryOptions) {
 		q.Filter = filter
-	}
-}
-
-// BuildQueryOptions 构建查询选项
-func (q *QueryOptions) BuildQueryOptions(ctx *gin.Context) {
-	// 处理搜索
-	if search := ctx.Query("search"); search != "" {
-		q.Search = search
-		q.SearchFields = strings.Split(ctx.DefaultQuery("search_fields", "id"), ",")
-	}
-
-	// 处理过滤条件
-	q.buildFilterOptions(ctx)
-
-	// 处理预加载关系
-	if preload := ctx.Query("preload"); preload != "" {
-		q.Preload = strings.Split(preload, ",")
-	}
-
-	// 处理字段选择
-	if fields := ctx.Query("fields"); fields != "" {
-		q.Select = strings.Split(fields, ",")
-	}
-}
-
-// buildFilterOptions 构建过滤选项
-func (q *QueryOptions) buildFilterOptions(ctx *gin.Context) {
-	querys := ctx.Request.URL.Query()
-	for key, values := range querys {
-		// 跳过特殊参数
-		if isSpecialParam(key) {
-			continue
-		}
-
-		// 处理范围查询
-		if strings.HasSuffix(key, "_gt") || strings.HasSuffix(key, "_lt") ||
-			strings.HasSuffix(key, "_gte") || strings.HasSuffix(key, "_lte") {
-			field := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(
-				strings.TrimSuffix(key, "_gt"), "_lt"), "_gte"), "_lte")
-
-			if strings.HasSuffix(key, "_gt") {
-				q.Where[field+" > ?"] = values[0]
-			} else if strings.HasSuffix(key, "_lt") {
-				q.Where[field+" < ?"] = values[0]
-			} else if strings.HasSuffix(key, "_gte") {
-				q.Where[field+" >= ?"] = values[0]
-			} else if strings.HasSuffix(key, "_lte") {
-				q.Where[field+" <= ?"] = values[0]
-			}
-			continue
-		}
-
-		// 处理IN查询
-		if strings.HasSuffix(key, "_in") {
-			field := strings.TrimSuffix(key, "_in")
-			q.Where[field+" IN ?"] = strings.Split(values[0], ",")
-			continue
-		}
-
-		// 处理NULL查询
-		if strings.HasSuffix(key, "_null") {
-			field := strings.TrimSuffix(key, "_null")
-			if values[0] == "true" {
-				q.Where[field+" IS NULL"] = nil
-			} else {
-				q.Where[field+" IS NOT NULL"] = nil
-			}
-			continue
-		}
-
-		// 处理模糊查询
-		if strings.HasSuffix(key, "_like") {
-			field := strings.TrimSuffix(key, "_like")
-			q.Where[field+" LIKE ?"] = "%" + values[0] + "%"
-			continue
-		}
-
-		// 处理普通相等查询
-		if !isSpecialParam(key) {
-			q.Filter[key] = values[0]
-		}
 	}
 }
 

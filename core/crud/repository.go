@@ -84,10 +84,14 @@ func NewRepository[T ICrudEntity](db *database.Database, entity T) *Repository[T
 		// repo.gormRepo = newGormRepository[T](db.DB(), entity)
 		repo.crudRepo[DB_TYPE_GORM] = newGormRepository(db.DB(), entity)
 	case DB_TYPE_MONGODB:
-		// repo.crudRepo[DB_TYPE_MONGODB] = newMongoRepository[T](db.MDB(), entity)
+		repo.crudRepo[DB_TYPE_MONGODB] = newMongoRepository(db.MDB(), entity)
 	}
 
 	return repo
+}
+
+func (r *Repository[T]) SetCrudRepo(dbType string, repo IRepository[T]) {
+	r.crudRepo[dbType] = repo
 }
 
 // FindOne 查询单个实体
