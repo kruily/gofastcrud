@@ -8,9 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/kruily/gofastcrud/core/crud/types"
+	"github.com/kruily/gofastcrud/core/database"
 	"github.com/kruily/gofastcrud/errors"
 	"github.com/kruily/gofastcrud/validator"
-	"gorm.io/gorm"
 )
 
 // CrudController 控制器实现
@@ -19,14 +19,14 @@ type CrudController[T ICrudEntity] struct {
 }
 
 // NewCrudController 创建控制器
-func NewCrudController[T ICrudEntity](db *gorm.DB, entity T) *CrudController[T] {
+func NewCrudController[T ICrudEntity](db *database.Database, entity T) *CrudController[T] {
 	c := &CrudController[T]{
 		BlankController: NewBlankController(db, entity),
 	}
 	c.routes = append(c.routes, c.standardRoutes(false, 0)...)
 
 	// 自动配置预加载
-	c.configurePreloads()
+	// c.configurePreloads()
 
 	return c
 }

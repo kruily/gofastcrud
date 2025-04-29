@@ -8,15 +8,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/kruily/gofastcrud/core/crud/types"
+	"github.com/kruily/gofastcrud/core/database"
 	"github.com/kruily/gofastcrud/errors"
-	"gorm.io/gorm"
 )
 
 type OnlyReadController[T ICrudEntity] struct {
 	*BlankController[T]
 }
 
-func NewOnlyReadController[T ICrudEntity](db *gorm.DB, entity T) *OnlyReadController[T] {
+func NewOnlyReadController[T ICrudEntity](db *database.Database, entity T) *OnlyReadController[T] {
 	controller := &OnlyReadController[T]{
 		BlankController: NewBlankController(db, entity),
 	}

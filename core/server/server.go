@@ -15,7 +15,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kruily/gofastcrud/config"
 	"github.com/kruily/gofastcrud/core/crud"
+	"github.com/kruily/gofastcrud/core/crud/module"
 	"github.com/kruily/gofastcrud/core/crud/types"
+	"github.com/kruily/gofastcrud/core/database"
+	"github.com/kruily/gofastcrud/core/di"
 	"github.com/kruily/gofastcrud/core/openapi"
 	"github.com/kruily/gofastcrud/core/templates"
 )
@@ -100,6 +103,14 @@ func (s *Server) Run() error {
 
 	if err := s.srv.Shutdown(ctx); err != nil {
 		return err
+	}
+
+	// 关闭数据库连接
+	db := di.SINGLE().MustGetSingletonByName(module.DatabaseService).(*database.Database)
+	if db != nil {
+		if err := db.Close(); err != nil {
+			panic(err)
+		}
 	}
 
 	log.Println("Server exiting")

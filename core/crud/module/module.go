@@ -5,6 +5,8 @@ type IModule interface{}
 const (
 	ServerService   = "Server"
 	ConfigService   = "Config"
+	GormService     = "Gorm"
+	MongoService    = "Mongo"
 	DatabaseService = "Database"
 	ResponseService = "Response"
 	ScheduleService = "Schedule"

@@ -5,10 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"gorm.io/gorm"
 
 	"github.com/kruily/gofastcrud/core/crud"
 	"github.com/kruily/gofastcrud/core/crud/types"
+	"github.com/kruily/gofastcrud/core/database"
 	"github.com/kruily/gofastcrud/example/models"
 )
 
@@ -25,7 +25,7 @@ type UserController struct {
 	*crud.CrudController[*models.User]
 }
 
-func NewUserController(db *gorm.DB) crud.ICrudController[crud.ICrudEntity] {
+func NewUserController(db *database.Database) crud.ICrudController[crud.ICrudEntity] {
 	controller := &UserController{
 		CrudController: crud.NewCrudController(db, &models.User{}),
 	}

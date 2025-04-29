@@ -10,8 +10,8 @@ import (
 	"github.com/kruily/gofastcrud/core/crud/module"
 	"github.com/kruily/gofastcrud/core/crud/options"
 	"github.com/kruily/gofastcrud/core/crud/types"
+	"github.com/kruily/gofastcrud/core/database"
 	"github.com/kruily/gofastcrud/core/di"
-	"gorm.io/gorm"
 )
 
 // ICrudController 控制器接口
@@ -45,7 +45,7 @@ type BlankController[T ICrudEntity] struct {
 }
 
 // NewCrudController 创建控制器
-func NewBlankController[T ICrudEntity](db *gorm.DB, entity T) *BlankController[T] {
+func NewBlankController[T ICrudEntity](db *database.Database, entity T) *BlankController[T] {
 	entity.Init()
 	entityType := reflect.TypeOf(entity)
 	if entityType.Kind() == reflect.Ptr {
@@ -67,37 +67,37 @@ func NewBlankController[T ICrudEntity](db *gorm.DB, entity T) *BlankController[T
 	// c.routes = append(c.routes, c.standardRoutes(false, 0)...)
 
 	// 自动配置预加载
-	c.configurePreloads()
+	// c.configurePreloads()
 
 	return c
 }
 
 // configurePreloads 配置预加载
-func (c *BlankController[T]) configurePreloads() {
-	// 获取实体类型
-	entityType := reflect.TypeOf(c.entity)
-	if entityType.Kind() == reflect.Ptr {
-		entityType = entityType.Elem()
-	}
+// func (c *BlankController[T]) configurePreloads() {
+// 	// 获取实体类型
+// 	entityType := reflect.TypeOf(c.entity)
+// 	if entityType.Kind() == reflect.Ptr {
+// 		entityType = entityType.Elem()
+// 	}
 
-	var preloadFields []string
-	// 遍历所有字段
-	for i := 0; i < entityType.NumField(); i++ {
-		field := entityType.Field(i)
+// 	var preloadFields []string
+// 	// 遍历所有字段
+// 	for i := 0; i < entityType.NumField(); i++ {
+// 		field := entityType.Field(i)
 
-		// 检查是否是关联字段（指针或切片类型）
-		if (field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice) &&
-			field.Tag.Get("gorm") != "" {
-			// 只有带有gorm标签的字段才添加预加载
-			preloadFields = append(preloadFields, field.Name)
-		}
-	}
+// 		// 检查是否是关联字段（指针或切片类型）
+// 		if (field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice) &&
+// 			field.Tag.Get("gorm") != "" {
+// 			// 只有带有gorm标签的字段才添加预加载
+// 			preloadFields = append(preloadFields, field.Name)
+// 		}
+// 	}
 
-	// 添加预加载钩子
-	if len(preloadFields) > 0 {
-		c.Repository.Preload(preloadFields...)
-	}
-}
+// 	// 添加预加载钩子
+// 	if len(preloadFields) > 0 {
+// 		c.Repository.Preload(preloadFields...)
+// 	}
+// }
 
 // UseMiddleware 添加中间件
 func (c *BlankController[T]) UseMiddleware(method string, middlewares ...gin.HandlerFunc) {

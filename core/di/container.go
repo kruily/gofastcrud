@@ -104,7 +104,7 @@ func (c *Container) BindWithOptions(name string, obj any, objType reflect.Type, 
 
 	return nil
 }
-func (c *Container) resolveSingleton(name string) (interface{}, error) {
+func (c *Container) ResolveSingleton(name string) (interface{}, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if instance, ok := c.instances[name]; ok {
@@ -116,7 +116,7 @@ func (c *Container) resolveSingleton(name string) (interface{}, error) {
 
 // 获取依赖
 func (c *Container) GetSingletonByName(name string) (interface{}, error) {
-	return c.resolveSingleton(name)
+	return c.ResolveSingleton(name)
 }
 
 // MustGetSingletonByName 获取依赖（如果出错则panic）

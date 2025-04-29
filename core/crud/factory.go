@@ -3,23 +3,27 @@ package crud
 import (
 	"reflect"
 
+	"github.com/kruily/gofastcrud/core/crud/module"
 	"github.com/kruily/gofastcrud/core/crud/types"
-	"gorm.io/gorm"
+	"github.com/kruily/gofastcrud/core/database"
+	"github.com/kruily/gofastcrud/core/di"
 )
 
 // ControllerFactory 控制器工厂
 type ControllerFactory struct {
-	db     *gorm.DB
+	db     *database.Database // TODO 还需要想办法，将具体的数据库实例注入到控制器，使用mongog的实体使用mongodb，使用mysql的实体使用mysql
 	models []interface{}
 }
 
 // NewControllerFactory 创建控制器工厂
-func NewControllerFactory(db *gorm.DB) *ControllerFactory {
+func NewControllerFactory() *ControllerFactory {
+	// 获取依赖服务
+	db := di.SINGLE().MustGetSingletonByName(module.DatabaseService).(*database.Database)
 	return &ControllerFactory{db: db}
 }
 
 // RegisterGroup 注册后台路由组
-// 简单注册，默认注册
+// 简单注册，默认注册标准控制器
 // server 是注册服务器
 // model 是实体
 func (f *ControllerFactory) Register(server types.RegisterServer, model ICrudEntity) ICrudController[ICrudEntity] {
@@ -34,7 +38,7 @@ func (f *ControllerFactory) Register(server types.RegisterServer, model ICrudEnt
 // server 是注册服务器
 // model 是实体
 // constructor 是控制器构造函数
-func (f *ControllerFactory) RegisterCustom(server types.RegisterServer, constructor func(*gorm.DB) ICrudController[ICrudEntity]) ICrudController[ICrudEntity] {
+func (f *ControllerFactory) RegisterCustom(server types.RegisterServer, constructor func(*database.Database) ICrudController[ICrudEntity]) ICrudController[ICrudEntity] {
 	controller := constructor(f.db)
 	f.models = append(f.models, controller.GetEntity())
 	server.RegisterCrudController(controller.GetEntity().TableName(), controller, reflect.TypeOf(controller.GetEntity()))
@@ -53,7 +57,7 @@ func (f *ControllerFactory) RegisterWithFather(server types.RegisterServer, fath
 	return controller
 }
 
-func (f *ControllerFactory) RegisterWithFatherCustom(server types.RegisterServer, father ICrudController[ICrudEntity], constructor func(*gorm.DB) ICrudController[ICrudEntity]) ICrudController[ICrudEntity] {
+func (f *ControllerFactory) RegisterWithFatherCustom(server types.RegisterServer, father ICrudController[ICrudEntity], constructor func(*database.Database) ICrudController[ICrudEntity]) ICrudController[ICrudEntity] {
 	controller := constructor(f.db)
 	f.models = append(f.models, controller.GetEntity())
 	server.RegisterCrudControllerWithFather(father, controller.GetEntity().TableName(), controller, reflect.TypeOf(controller.GetEntity()))
@@ -75,7 +79,7 @@ func (f *ControllerFactory) RegisterBatch(server types.RegisterServer, models ..
 // 使用场景：当需要批量注册自定义控制器,可以通过此方法注册
 // server 是注册服务器
 // controllerConstructor 是控制器构造函数
-func (f *ControllerFactory) RegisterBatchCustom(server types.RegisterServer, controllerConstructor ...func(*gorm.DB) ICrudController[ICrudEntity]) {
+func (f *ControllerFactory) RegisterBatchCustom(server types.RegisterServer, controllerConstructor ...func(*database.Database) ICrudController[ICrudEntity]) {
 	for _, constructor := range controllerConstructor {
 		controller := constructor(f.db)
 		f.models = append(f.models, controller.GetEntity())
@@ -98,7 +102,7 @@ func (f *ControllerFactory) RegisterBatchMap(server types.RegisterServer, models
 // 使用场景：当需要批量注册自定义控制器,希望自定义路由组名，可以通过此方法注册
 // server 是注册服务器
 // mapControllerConstructor 是控制器构造函数映射
-func (f *ControllerFactory) RegisterBatchCustomMap(server types.RegisterServer, mapControllerConstructor map[string]func(*gorm.DB) ICrudController[ICrudEntity]) {
+func (f *ControllerFactory) RegisterBatchCustomMap(server types.RegisterServer, mapControllerConstructor map[string]func(*database.Database) ICrudController[ICrudEntity]) {
 	for key, constructor := range mapControllerConstructor {
 		controller := constructor(f.db)
 		f.models = append(f.models, controller.GetEntity())
@@ -106,6 +110,9 @@ func (f *ControllerFactory) RegisterBatchCustomMap(server types.RegisterServer, 
 	}
 }
 
+// gorm 自动迁移
 func (f *ControllerFactory) Migrate() {
-	f.db.AutoMigrate(f.models...)
+	if f.db.DB() != nil {
+		f.db.DB().AutoMigrate(f.models...)
+	}
 }

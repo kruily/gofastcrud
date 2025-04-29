@@ -7,6 +7,7 @@ import (
 	"github.com/kruily/gofastcrud/config"
 	"github.com/kruily/gofastcrud/core/app"
 	"github.com/kruily/gofastcrud/core/crud"
+	"github.com/kruily/gofastcrud/core/database"
 	"github.com/kruily/gofastcrud/core/server"
 	"github.com/kruily/gofastcrud/example/controllers"
 	"github.com/kruily/gofastcrud/utils"
@@ -29,7 +30,15 @@ func init() {
 
 func main() {
 
-	app := app.NewDefaultGoFastCrudApp()
+	cfg := config.CONFIG_MANAGER.GetConfig()
+
+	db := database.New(&cfg.Database)
+
+	// 初始化数据库
+
+	app := app.NewDefaultGoFastCrudApp(
+		app.WithDatabase(db),
+	)
 
 	app.PublishVersion(server.V1)
 
