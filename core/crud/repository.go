@@ -6,7 +6,6 @@ import (
 
 	"github.com/kruily/gofastcrud/core/crud/options"
 	"github.com/kruily/gofastcrud/core/database"
-	"gorm.io/gorm"
 )
 
 // IRepository 仓储接口
@@ -64,8 +63,6 @@ type IRepository[T ICrudEntity] interface {
 
 // Repository 仓储实现
 type Repository[T ICrudEntity] struct {
-	gormRepo   *gormRepository[T]
-	mongoRepo  *mongoRepository[T]
 	crudRepo   map[string]IRepository[T]
 	entityType reflect.Type
 }
@@ -92,52 +89,6 @@ func NewRepository[T ICrudEntity](db *database.Database, entity T) *Repository[T
 
 	return repo
 }
-
-// Session 创建新会话
-// func (r *Repository[T]) Session() IRepository[T] {
-// 	repo := &Repository[T]{
-// 		entityType: r.entityType,
-// 	}
-
-// 	if r.gormRepo != nil {
-// 		repo.gormRepo = &gormRepository[T]{
-// 			db:         r.gormRepo.db.Session(&gorm.Session{}),
-// 			entityType: r.entityType,
-// 			preloads:   make([]string, 0),
-// 		}
-// 	}
-
-// 	if r.mongoRepo != nil {
-// 		repo.mongoRepo = &mongoRepository[T]{
-// 			db:         r.mongoRepo.db,
-// 			collection: r.mongoRepo.collection,
-// 			entityType: r.entityType,
-// 		}
-// 	}
-
-// 	return repo
-// }
-
-// AddQueryHook 添加查询钩子
-func (r *Repository[T]) AddQueryHook(hook QueryHook) IRepository[T] {
-	if r.crudRepo[DB_TYPE_GORM] != nil {
-		// 创建新的会话以避免污染原有查询
-		db := r.gormRepo.db.Session(&gorm.Session{})
-		// 注册回调
-		db.Callback().Query().Before("gorm:query").Register("my_hook:before", hook.BeforeQuery)
-		db.Callback().Query().After("gorm:query").Register("my_hook:after", hook.AfterQuery)
-		r.gormRepo.db = db
-	}
-	return r
-}
-
-// Preload 添加预加载
-// func (r *Repository[T]) Preload(query ...string) IRepository[T] {
-// 	if r.crudRepo[DB_TYPE_GORM] != nil {
-// 		r.crudRepo[DB_TYPE_GORM].preloads = append(r.crudRepo[DB_TYPE_GORM].preloads, query...)
-// 	}
-// 	return r
-// }
 
 // FindOne 查询单个实体
 func (r *Repository[T]) FindOne(ctx context.Context, query interface{}, args ...interface{}) (T, error) {

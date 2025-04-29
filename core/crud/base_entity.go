@@ -86,5 +86,5 @@ func (e *BaseEntity) SetDeletedAt(t time.Time) {
 }
 
 func (b *BaseEntity) DBType() string {
-	return "mysql"
+	return DB_TYPE_GORM
 }

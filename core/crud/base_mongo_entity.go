@@ -42,5 +42,5 @@ func (b *BaseMongoEntity) SetDeletedAt(deletedAt time.Time) {
 }
 
 func (b *BaseMongoEntity) DBType() string {
-	return "mongo"
+	return DB_TYPE_MONGODB
 }

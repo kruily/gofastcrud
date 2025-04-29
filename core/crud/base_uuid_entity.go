@@ -71,5 +71,5 @@ func (e *BaseUUIDEntity) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 func (b *BaseUUIDEntity) DBType() string {
-	return "mysql"
+	return DB_TYPE_GORM
 }

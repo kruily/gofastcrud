@@ -35,7 +35,7 @@ func NewDefaultGoFastCrudApp(opts ...Option) *GoFastCrudApp {
 	// 创建控制器工厂
 	factory := crud.NewControllerFactory()
 
-	if _, err := container.ResolveSingleton(module.ResponseService); err == nil {
+	if _, err := container.ResolveSingleton(module.ResponseService); err != nil {
 		container.BindSingletonWithName(module.ResponseService, &utils.DefaultResponseHandler{})
 	}
 
