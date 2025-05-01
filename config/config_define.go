@@ -4,7 +4,7 @@ package config
 type Config struct {
 	App        AppConfig        `mapstructure:"app"`
 	Server     ServerConfig     `mapstructure:"server"`
-	Database   DatabaseConfig   `mapstructure:"database"`
+	Database   []DatabaseConfig `mapstructure:"database"`
 	Log        LogConfig        `mapstructure:"log"`
 	Redis      RedisConfig      `mapstructure:"redis"`
 	JWT        JWTConfig        `mapstructure:"jwt"`

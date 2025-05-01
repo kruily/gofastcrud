@@ -33,7 +33,6 @@ func NewCrudController[T ICrudEntity](db *database.Database, entity T) *CrudCont
 
 // Create 创建实体
 func (c *CrudController[T]) Create(ctx *gin.Context) (interface{}, error) {
-	// var entity T
 	entity := NewModel[T]()
 	if err := ctx.ShouldBindJSON(entity); err != nil {
 		return nil, err
@@ -67,7 +66,7 @@ func (c *CrudController[T]) GetById(ctx *gin.Context) (interface{}, error) {
 	} else if idInt, err := strconv.ParseUint(id, 10, 64); err == nil {
 		idTID = idInt // 直接赋值
 	} else {
-		return nil, errors.New(errors.ErrInvalidParam, "invalid id parameter")
+		idTID = id
 	}
 
 	entity, err := c.Repository.FindById(ctx, idTID)
@@ -123,9 +122,10 @@ func (c *CrudController[T]) Update(ctx *gin.Context) (interface{}, error) {
 		idTID = idUUID // 直接赋值
 	} else if idInt, err := strconv.ParseUint(id, 10, 64); err == nil {
 		idTID = idInt // 直接赋值
-	} else {
-		return nil, errors.New(errors.ErrInvalidParam, "invalid id parameter")
+	}else {
+		idTID = id // 直接赋值
 	}
+
 
 	entity, err := c.Repository.FindById(ctx, idTID)
 	if err != nil {
@@ -152,9 +152,10 @@ func (c *CrudController[T]) Delete(ctx *gin.Context) (interface{}, error) {
 		idTID = idUUID // 直接赋值
 	} else if idInt, err := strconv.ParseUint(id, 10, 64); err == nil {
 		idTID = idInt // 直接赋值
-	} else {
-		return nil, errors.New(errors.ErrInvalidParam, "invalid id parameter")
+	}else {
+		idTID = id // 直接赋值
 	}
+
 
 	// opts := options.NewDeleteOptions()
 	if err := c.Repository.DeleteById(ctx, idTID); err != nil {
@@ -242,9 +243,9 @@ func (c *CrudController[T]) BatchDelete(ctx *gin.Context) (interface{}, error) {
 // standardRoutes 标准路由
 func (c *CrudController[T]) standardRoutes(cache bool, cacheTTL int) []*types.APIRoute {
 	entityName := strings.ToLower(c.entityName[:1]) + c.entityName[1:]
-	idType := "integer"
-	if _, ok := c.entity.GetID().(uuid.UUID); ok {
-		idType = "string"
+	idType := "string"
+	if _, ok := c.entity.GetID().(uint); ok {
+		idType = "integer"
 	}
 	return []*types.APIRoute{
 		{

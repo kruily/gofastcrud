@@ -11,16 +11,24 @@ server:
   write_timeout: 60
 
 database:
-  driver: "mysql"
-  host: "localhost"
-  port: 3306
-  username: "root"
-  password: "123456"
-  database: "aj_report"
-  max_idle_conns: 10
-  max_open_conns: 100
-  conn_max_lifetime: 3600
-  charset: "utf8mb4"
+  - 
+    driver: "mysql"
+    host: "localhost"
+    port: 3306
+    username: "root"
+    password: "root2020"
+    database: "test_crud"
+    max_idle_conns: 10
+    max_open_conns: 100
+    conn_max_lifetime: 3600
+    charset: "utf8mb4"
+  - 
+    driver: "mongo"
+    host: "10.1.2.123"
+    port: 27017
+    username: "root"
+    password: "123456"
+    database: "mongo_test"
 
 pagenation:
   default_page_size: 10

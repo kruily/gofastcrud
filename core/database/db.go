@@ -7,8 +7,6 @@ import (
 	"log"
 	"time"
 
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -16,58 +14,74 @@ import (
 	"gorm.io/gorm/logger"
 
 	"github.com/kruily/gofastcrud/config"
+	"github.com/qiniu/qmgo"
 )
 
 // Database 数据库管理器
 type Database struct {
-	db     *gorm.DB
-	mdb    *mongo.Database
-	config *config.DatabaseConfig
+	db      *gorm.DB
+	mdb     *qmgo.Database
+	mClient *qmgo.Client
+	config  []config.DatabaseConfig
 }
 
 // New 创建数据库管理器实例
-func New(cfg *config.DatabaseConfig) *Database {
+func New(cfg []config.DatabaseConfig) *Database {
 	obj := &Database{}
 	var err error
 	obj.config = cfg
 
-	switch cfg.Driver {
-	case "mysql":
-		if cfg.Charset == "" {
-			cfg.Charset = "utf8mb4"
+	for _, c := range cfg {
+		switch c.Driver {
+		case "mysql":
+			if c.Charset == "" {
+				c.Charset = "utf8mb4"
+			}
+			dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
+				c.Username, c.Password, c.Host, c.Port, c.Database, c.Charset)
+			obj.db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
+		case "postgres":
+			dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
+				c.Host, c.Username, c.Password, c.Database, c.Port)
+			obj.db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		case "sqlite":
+			obj.db, err = gorm.Open(sqlite.Open(c.Database), &gorm.Config{})
+		case "mongo":
+			dsn := fmt.Sprintf("mongodb://%s:%d", c.Host, c.Port)
+			// 连接 MongoDB
+
+			client, err1 := qmgo.NewClient(context.Background(), &qmgo.Config{
+				Uri: dsn,
+				Auth: &qmgo.Credential{
+					Username: c.Username,
+					Password: c.Password,
+				},
+			})
+			if err1 != nil {
+				panic(fmt.Errorf("连接 MongoDB 失败: %v", err1))
+			}
+			// 选择数据库
+			obj.mClient = client
+			obj.mdb = client.Database(c.Database)
+		default:
+			panic(fmt.Errorf("不支持的数据库类型: %s", c.Driver))
 		}
-		dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
-			cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Database, cfg.Charset)
-		obj.db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
-	case "postgres":
-		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
-			cfg.Host, cfg.Username, cfg.Password, cfg.Database, cfg.Port)
-		obj.db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	case "sqlite":
-		obj.db, err = gorm.Open(sqlite.Open(cfg.Database), &gorm.Config{})
-	case "mongo":
-		dsn := fmt.Sprintf("mongodb://%s:%s@%s:%d",
-			cfg.Username, cfg.Password, cfg.Host, cfg.Port)
-		client, err1 := mongo.Connect(context.Background(), options.Client().ApplyURI(dsn))
-		if err1 != nil {
-			panic(fmt.Errorf("连接 MongoDB 失败: %v", err1))
+
+		if err != nil {
+			panic(fmt.Errorf("连接数据库失败: %v", err))
 		}
-		obj.mdb = client.Database(cfg.Database)
-	default:
-		panic(fmt.Errorf("不支持的数据库类型: %s", cfg.Driver))
+
+		if c.Driver == "mongo" {
+			continue
+		}
+		// gorm 配置连接池
+		if err := obj.ConfigurePool(&c); err != nil {
+			panic(err)
+		}
+		log.Printf("Database connected successfully with pool configuration: (MaxIdleConns: %d, MaxOpenConns: %d, ConnMaxLifetime: %ds)",
+			c.MaxIdleConns, c.MaxOpenConns, c.ConnMaxLifetime)
 	}
 
-	if err != nil {
-		panic(fmt.Errorf("连接数据库失败: %v", err))
-	}
-
-	// 配置连接池
-	if err := obj.ConfigurePool(cfg); err != nil {
-		panic(err)
-	}
-
-	log.Printf("Database connected successfully with pool configuration: (MaxIdleConns: %d, MaxOpenConns: %d, ConnMaxLifetime: %ds)",
-		cfg.MaxIdleConns, cfg.MaxOpenConns, cfg.ConnMaxLifetime)
 	return obj
 }
 
@@ -106,7 +120,7 @@ func (d *Database) ConfigurePool(cfg *config.DatabaseConfig) error {
 	return nil
 }
 
-// GetStats 获取连接池统计信息
+// GetStats 获取gorm 连接池统计信息
 func (d *Database) GetStats() sql.DBStats {
 	sqlDB, err := d.db.DB()
 	if err != nil {
@@ -120,7 +134,7 @@ func (d *Database) DB() *gorm.DB {
 	return d.db
 }
 
-func (d *Database) MDB() *mongo.Database {
+func (d *Database) MDB() *qmgo.Database {
 	return d.mdb
 }
 
@@ -134,7 +148,7 @@ func (d *Database) Close() (err error) {
 		err = sqlDB.Close()
 	}
 	if d.mdb != nil {
-		err = d.mdb.Client().Disconnect(context.Background())
+		err = d.mClient.Close(context.Background())
 	}
 	return
 }

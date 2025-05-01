@@ -41,7 +41,7 @@ func (c *OnlyReadController[T]) GetById(ctx *gin.Context) (interface{}, error) {
 	} else if idInt, err := strconv.ParseUint(id, 10, 64); err == nil {
 		idTID = idInt // 直接赋值
 	} else {
-		return nil, errors.New(errors.ErrInvalidParam, "invalid id parameter")
+		idTID = id // 直接赋值
 	}
 
 	entity, err := c.Repository.FindById(ctx, idTID)

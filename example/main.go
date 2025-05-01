@@ -32,7 +32,7 @@ func main() {
 
 	cfg := config.CONFIG_MANAGER.GetConfig()
 
-	db := database.New(&cfg.Database)
+	db := database.New(cfg.Database)
 
 	// 初始化数据库
 
